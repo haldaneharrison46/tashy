@@ -4,6 +4,12 @@
 // ============================================================
 require_once __DIR__ . '/../config/db.php';
 
+// ── Fallback site constants ───────────────────────────────────
+// config/db.php is gitignored, so older copies may not define these.
+if (!defined('SITE_ADDRESS')) {
+    define('SITE_ADDRESS', '37 Cornwall Street, Falmouth, Trelawny, Jamaica');
+}
+
 // ── Output escaping ───────────────────────────────────────────
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
