@@ -1,0 +1,115 @@
+<?php
+// Admin header — included by every admin page
+// Expects $pageTitle to be set before including
+require_once dirname(__DIR__) . '/includes/functions.php';
+require_once dirname(__DIR__) . '/includes/auth.php';
+require_admin(); // redirects non-admins
+
+$adminUser   = current_user();
+$currentPage = basename($_SERVER['PHP_SELF']);
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><?= h($pageTitle ?? 'Admin') ?> | <?= SITE_NAME ?></title>
+<link rel="stylesheet" href="../assets/css/style.css">
+<style>
+/* ── Admin shell ────────────────────────────── */
+body { display:flex; min-height:100vh; flex-direction:column; }
+.admin-wrap { display:flex; flex:1; }
+.admin-sidebar {
+  width:220px; flex-shrink:0;
+  background:#1a1a1a; color:#e0e0e0;
+  padding:0; display:flex; flex-direction:column; min-height:100vh;
+}
+.admin-sidebar .brand {
+  padding:22px 20px 18px;
+  font-size:1.05rem; font-weight:700;
+  color:#fff; border-bottom:1px solid #333;
+  text-decoration:none; display:block;
+}
+.admin-sidebar nav a {
+  display:flex; align-items:center; gap:10px;
+  padding:11px 20px; color:#bbb; text-decoration:none;
+  font-size:0.88rem; transition:background .15s;
+}
+.admin-sidebar nav a:hover, .admin-sidebar nav a.active {
+  background:#2a2a2a; color:#fff;
+}
+.admin-sidebar nav a .icon { font-size:1rem; width:20px; text-align:center; }
+.admin-sidebar nav .section-label {
+  padding:14px 20px 6px; font-size:0.7rem; font-weight:700;
+  text-transform:uppercase; letter-spacing:.08em; color:#555;
+}
+.admin-sidebar .sidebar-footer {
+  margin-top:auto; padding:16px 20px;
+  font-size:0.8rem; color:#666; border-top:1px solid #2a2a2a;
+}
+.admin-content { flex:1; display:flex; flex-direction:column; min-width:0; }
+.admin-topbar {
+  background:var(--white); border-bottom:1px solid var(--grey-light);
+  padding:14px 28px; display:flex; align-items:center; justify-content:space-between;
+  position:sticky; top:0; z-index:100;
+}
+.admin-topbar h1 { font-size:1.15rem; font-weight:700; }
+.admin-topbar .topbar-right { display:flex; align-items:center; gap:16px; font-size:0.85rem; color:#888; }
+.admin-topbar .topbar-right a { color:var(--rose-gold); text-decoration:none; }
+.admin-main { padding:28px; flex:1; }
+
+/* ── Admin UI components ─────────────────────── */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:18px; margin-bottom:28px; }
+.stat-card {
+  background:var(--white); border:1px solid var(--grey-light); border-radius:12px;
+  padding:20px; text-align:center;
+}
+.stat-card .stat-val { font-size:1.6rem; font-weight:700; color:var(--rose-gold); }
+.stat-card .stat-lbl { font-size:0.78rem; color:#888; margin-top:4px; }
+.admin-table { width:100%; border-collapse:collapse; font-size:0.88rem; }
+.admin-table th { text-align:left; padding:8px 12px; border-bottom:2px solid var(--grey-light); font-size:0.78rem; text-transform:uppercase; letter-spacing:.04em; color:#888; }
+.admin-table td { padding:10px 12px; border-bottom:1px solid var(--grey-light); vertical-align:middle; }
+.admin-table tr:hover td { background:var(--rose-pale); }
+.admin-card { background:var(--white); border:1px solid var(--grey-light); border-radius:12px; padding:24px; margin-bottom:24px; }
+.admin-card h2 { font-size:1rem; margin-bottom:18px; }
+.badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:0.72rem; font-weight:700; text-transform:uppercase; }
+.badge-success { background:#d1fae5; color:#065f46; }
+.badge-warning { background:#fef9c3; color:#a16207; }
+.badge-info    { background:#dbeafe; color:#1d4ed8; }
+.badge-danger  { background:#fee2e2; color:#991b1b; }
+.badge-grey    { background:#f3f4f6; color:#6b7280; }
+.admin-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.admin-form-grid .full { grid-column:1/-1; }
+</style>
+</head>
+<body>
+<div class="admin-wrap">
+
+  <!-- Sidebar -->
+  <aside class="admin-sidebar">
+    <a href="<?= SITE_URL ?>/admin/index.php" class="brand">⚡ <?= SITE_NAME ?><br><span style="font-size:0.7rem;font-weight:400;color:#777">Admin Panel</span></a>
+    <nav>
+      <div class="section-label">Main</div>
+      <a href="index.php"    class="<?= $currentPage==='index.php'    ? 'active':'' ?>"><span class="icon">📊</span> Dashboard</a>
+      <a href="products.php" class="<?= $currentPage==='products.php' ? 'active':'' ?>"><span class="icon">🛍️</span> Products</a>
+      <a href="orders.php"   class="<?= $currentPage==='orders.php'   ? 'active':'' ?>"><span class="icon">📦</span> Orders</a>
+      <a href="users.php"    class="<?= $currentPage==='users.php'    ? 'active':'' ?>"><span class="icon">👥</span> Users</a>
+      <div class="section-label">Site</div>
+      <a href="<?= SITE_URL ?>" target="_blank"><span class="icon">🌐</span> View Store</a>
+    </nav>
+    <div class="sidebar-footer">
+      Signed in as <strong><?= h($adminUser['name']) ?></strong><br>
+      <a href="<?= SITE_URL ?>/logout.php" style="color:#e07878">Sign out</a>
+    </div>
+  </aside>
+
+  <!-- Content area -->
+  <div class="admin-content">
+    <div class="admin-topbar">
+      <h1><?= $pageTitle ?? 'Admin' ?></h1>
+      <div class="topbar-right">
+        <span><?= date('l, d M Y') ?></span>
+        <a href="products.php?action=add">+ New Product</a>
+      </div>
+    </div>
+    <div class="admin-main">

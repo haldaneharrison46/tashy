@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#f5f0eb"/>
+  <text x="200" y="190" font-family="Arial" font-size="14" fill="#b8a99a" text-anchor="middle">Product Image</text>
+  <text x="200" y="215" font-family="Arial" font-size="12" fill="#c8b8ae" text-anchor="middle">Coming Soon</text>
+</svg>

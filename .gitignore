@@ -1,0 +1,15 @@
+# Secrets
+config/db.php
+.env
+
+# PHP
+*.log
+/vendor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
