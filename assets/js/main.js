@@ -6,21 +6,20 @@
 /* ── Early theme restore (runs synchronously before DOM parse finishes) ── */
 (function () {
   var TVARS = {
-    light: { '--off-white': '#ffffff', '--white': '#ffffff', '--grey-light': '#f0f0f0', '--rose-pale': '#fff7f4' },
-    dark: {
-      '--off-white': '#111214', '--white': '#1d1f22', '--grey-light': '#28292d', '--grey-mid': '#888888',
-      '--grey-dark': '#b8b8b8', '--black': '#e8e5e0', '--black-soft': '#26282c', '--rose-pale': '#1e120a',
-      '--rose-gold': '#d4916a', '--rose-light': '#e8ae86'
+    sandstone: {
+      '--black': '#2f2a25', '--black-soft': '#3e3832', '--rose-gold': '#b27a4f', '--rose-light': '#cf9b71',
+      '--rose-pale': '#f5ece2', '--gold-accent': '#c69a5b', '--off-white': '#faf6f0', '--white': '#ffffff',
+      '--grey-light': '#efe7dd', '--grey-dark': '#5c554c', '--grey-mid': '#9a8f83'
     },
-    pink: {
-      '--black': '#3d1525', '--black-soft': '#581e36', '--rose-gold': '#c84b70', '--rose-light': '#e07898',
-      '--rose-pale': '#fce0ea', '--gold-accent': '#b83860', '--off-white': '#fff5f8', '--white': '#fffafb',
-      '--grey-light': '#f8dde8', '--grey-dark': '#7a3050', '--grey-mid': '#b07090'
+    sage: {
+      '--black': '#2a2f2a', '--black-soft': '#39423a', '--rose-gold': '#6f8463', '--rose-light': '#93a886',
+      '--rose-pale': '#e9efe3', '--gold-accent': '#a98c5f', '--off-white': '#f5f7f1', '--white': '#ffffff',
+      '--grey-light': '#e6ebe0', '--grey-dark': '#515a4d', '--grey-mid': '#8a9384'
     },
-    blue: {
-      '--black': '#1a2a45', '--black-soft': '#25396a', '--rose-gold': '#4480c0', '--rose-light': '#70a8e4',
-      '--rose-pale': '#daeeff', '--gold-accent': '#3670b0', '--off-white': '#f3f8ff', '--white': '#f9fbff',
-      '--grey-light': '#d8eaf8', '--grey-dark': '#3a5880', '--grey-mid': '#6090b8'
+    blush: {
+      '--black': '#322a2c', '--black-soft': '#433639', '--rose-gold': '#bd7d82', '--rose-light': '#d6a0a4',
+      '--rose-pale': '#f8ebe9', '--gold-accent': '#c99a6a', '--off-white': '#faf4f3', '--white': '#ffffff',
+      '--grey-light': '#f0e5e3', '--grey-dark': '#5d5052', '--grey-mid': '#9c8d8f'
     }
   };
   var t = localStorage.getItem('sb-theme');
@@ -36,21 +35,20 @@ document.addEventListener('DOMContentLoaded', function () {
 
   /* ── Theme switcher ───────────────────────────── */
   var THEME_VARS = {
-    light: { '--off-white': '#ffffff', '--white': '#ffffff', '--grey-light': '#f0f0f0', '--rose-pale': '#fff7f4' },
-    dark: {
-      '--off-white': '#111214', '--white': '#1d1f22', '--grey-light': '#28292d', '--grey-mid': '#888888',
-      '--grey-dark': '#b8b8b8', '--black': '#e8e5e0', '--black-soft': '#26282c', '--rose-pale': '#1e120a',
-      '--rose-gold': '#d4916a', '--rose-light': '#e8ae86'
+    sandstone: {
+      '--black': '#2f2a25', '--black-soft': '#3e3832', '--rose-gold': '#b27a4f', '--rose-light': '#cf9b71',
+      '--rose-pale': '#f5ece2', '--gold-accent': '#c69a5b', '--off-white': '#faf6f0', '--white': '#ffffff',
+      '--grey-light': '#efe7dd', '--grey-dark': '#5c554c', '--grey-mid': '#9a8f83'
     },
-    pink: {
-      '--black': '#3d1525', '--black-soft': '#581e36', '--rose-gold': '#c84b70', '--rose-light': '#e07898',
-      '--rose-pale': '#fce0ea', '--gold-accent': '#b83860', '--off-white': '#fff5f8', '--white': '#fffafb',
-      '--grey-light': '#f8dde8', '--grey-dark': '#7a3050', '--grey-mid': '#b07090'
+    sage: {
+      '--black': '#2a2f2a', '--black-soft': '#39423a', '--rose-gold': '#6f8463', '--rose-light': '#93a886',
+      '--rose-pale': '#e9efe3', '--gold-accent': '#a98c5f', '--off-white': '#f5f7f1', '--white': '#ffffff',
+      '--grey-light': '#e6ebe0', '--grey-dark': '#515a4d', '--grey-mid': '#8a9384'
     },
-    blue: {
-      '--black': '#1a2a45', '--black-soft': '#25396a', '--rose-gold': '#4480c0', '--rose-light': '#70a8e4',
-      '--rose-pale': '#daeeff', '--gold-accent': '#3670b0', '--off-white': '#f3f8ff', '--white': '#f9fbff',
-      '--grey-light': '#d8eaf8', '--grey-dark': '#3a5880', '--grey-mid': '#6090b8'
+    blush: {
+      '--black': '#322a2c', '--black-soft': '#433639', '--rose-gold': '#bd7d82', '--rose-light': '#d6a0a4',
+      '--rose-pale': '#f8ebe9', '--gold-accent': '#c99a6a', '--off-white': '#faf4f3', '--white': '#ffffff',
+      '--grey-light': '#f0e5e3', '--grey-dark': '#5d5052', '--grey-mid': '#9c8d8f'
     }
   };
   var ALL_THEME_PROPS = [

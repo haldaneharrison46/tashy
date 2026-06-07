@@ -107,6 +107,20 @@ $_bodyClass = $bodyClass ?? '';
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         </button>
 
+        <!-- Theme switcher -->
+        <div class="theme-switch" tabindex="0">
+          <button class="header-action-btn" type="button" aria-label="Choose theme" aria-haspopup="true">
+            <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="10.5" r="1.5"/><circle cx="8.5" cy="7.5" r="1.5"/><circle cx="6.5" cy="12.5" r="1.5"/><path d="M12 2C6.49 2 2 6.04 2 11c0 3.87 3.13 7 7 7h1.5a1.5 1.5 0 0 1 1.06 2.56A1.5 1.5 0 0 0 12.5 22C17.75 22 22 18.2 22 13.5 22 7.15 17.51 2 12 2z"/></svg>
+          </button>
+          <div class="theme-switch-menu" role="menu">
+            <div class="ts-title">Theme</div>
+            <button class="theme-opt" data-theme-key="default" role="menuitem"><span class="theme-dot" style="background:#c9956c"></span> Classic Rose</button>
+            <button class="theme-opt" data-theme-key="sandstone" role="menuitem"><span class="theme-dot" style="background:#b27a4f"></span> Sandstone</button>
+            <button class="theme-opt" data-theme-key="sage" role="menuitem"><span class="theme-dot" style="background:#6f8463"></span> Sage</button>
+            <button class="theme-opt" data-theme-key="blush" role="menuitem"><span class="theme-dot" style="background:#bd7d82"></span> Blush</button>
+          </div>
+        </div>
+
         <!-- Account -->
         <?php if ($_user): ?>
         <div class="hdr-icon-wrap" id="hdrAccountWrap">
@@ -152,7 +166,15 @@ $_bodyClass = $bodyClass ?? '';
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
   </div>
-  <div class="mobile-pref-bar" id="mobilePrefBar"><!-- theme row injected by JS --></div>
+  <div class="mobile-pref-bar" id="mobilePrefBar">
+    <span class="mobile-pref-label" style="font-size:0.7rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--grey-mid);font-weight:700;">Theme</span>
+    <div class="mobile-theme-row">
+      <span class="theme-dot" data-theme-key="default"  title="Classic Rose" style="background:#c9956c"></span>
+      <span class="theme-dot" data-theme-key="sandstone" title="Sandstone"    style="background:#b27a4f"></span>
+      <span class="theme-dot" data-theme-key="sage"      title="Sage"         style="background:#6f8463"></span>
+      <span class="theme-dot" data-theme-key="blush"     title="Blush"        style="background:#bd7d82"></span>
+    </div>
+  </div>
   <ul>
     <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/index.php" class="mobile-nav-link">Home</a></li>
     <li class="mobile-nav-item">
