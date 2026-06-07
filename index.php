@@ -46,15 +46,15 @@ require_once __DIR__ . '/includes/header.php';
     <div class="collection-grid">
       <?php
         $collections = [
-          ['icon' => '🛏️', 'name' => 'Bedding',        'desc' => 'Sheets, duvets, comforters &amp; pillows for restful nights.'],
-          ['icon' => '🛁', 'name' => 'Kitchen &amp; Bath', 'desc' => 'Towels, mats, and finishing touches for everyday spaces.'],
-          ['icon' => '🧶', 'name' => 'Mats &amp; Rugs',    'desc' => 'Soft underfoot, statement on top — for any room.'],
-          ['icon' => '🕯️', 'name' => 'Fragrances',     'desc' => 'Signature scents &amp; home fragrance for him &amp; her.'],
-          ['icon' => '🎁', 'name' => 'Gift Sets',       'desc' => 'Beautifully bundled — ready to give, easy to love.'],
+          ['icon' => '🛏️', 'name' => 'Bedding',          'slug' => 'bedding',      'desc' => 'Sheets, duvets, comforters &amp; pillows for restful nights.'],
+          ['icon' => '🛁', 'name' => 'Kitchen &amp; Bath', 'slug' => 'kitchen-bath', 'desc' => 'Towels, robes, and finishing touches for everyday spaces.'],
+          ['icon' => '🧶', 'name' => 'Mats &amp; Rugs',    'slug' => 'mats-rugs',    'desc' => 'Soft underfoot, statement on top — for any room.'],
+          ['icon' => '🕯️', 'name' => 'Fragrances',       'slug' => 'fragrances',   'desc' => 'Signature scents &amp; home fragrance for him &amp; her.'],
+          ['icon' => '🎁', 'name' => 'Gift Sets',         'slug' => 'gift-sets',    'desc' => 'Beautifully bundled — ready to give, easy to love.'],
         ];
         foreach ($collections as $c):
       ?>
-      <a href="<?= SITE_URL ?>/shop.php" class="collection-card">
+      <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($c['slug']) ?>" class="collection-card">
         <div class="cc-icon"><?= $c['icon'] ?></div>
         <h3><?= $c['name'] ?></h3>
         <p><?= $c['desc'] ?></p>

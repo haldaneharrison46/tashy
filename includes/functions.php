@@ -141,6 +141,6 @@ function generate_order_number(): string {
 }
 
 // ── Image path helper ─────────────────────────────────────────
-function product_img(string $img = '', string $fallback = 'placeholder.jpg'): string {
+function product_img(string $img = '', string $fallback = 'placeholder.svg'): string {
     return SITE_URL . '/assets/images/' . ($img ?: $fallback);
 }
