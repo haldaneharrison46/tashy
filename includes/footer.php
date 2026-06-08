@@ -77,5 +77,6 @@
 </footer>
 
 <script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+<?php require __DIR__ . '/contact-widget.php'; ?>
 </body>
 </html>
