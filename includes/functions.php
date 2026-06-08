@@ -244,5 +244,33 @@ function jamaica_parishes(): array {
 
 // ── Image path helper ─────────────────────────────────────────
 function product_img(string $img = '', string $fallback = 'placeholder.svg'): string {
+    if (preg_match('~^https?://~i', $img)) return $img;   // allow full URLs
     return SITE_URL . '/assets/images/' . ($img ?: $fallback);
+}
+
+// ── Product gallery images (uploaded extras) ──────────────────
+function get_product_images(int $productId): array {
+    try {
+        $st = db()->prepare('SELECT id, filename FROM product_images WHERE product_id = ? ORDER BY sort_order, id');
+        $st->execute([$productId]);
+        return $st->fetchAll();
+    } catch (Throwable $e) {
+        return [];
+    }
+}
+
+// Full ordered gallery for a product: cover first, then uploaded images,
+// falling back to the legacy image2/image3 columns when no uploads exist.
+function product_gallery(array $product): array {
+    $imgs = [];
+    if (!empty($product['image'])) $imgs[] = $product['image'];
+    $extra = array_column(get_product_images((int)($product['id'] ?? 0)), 'filename');
+    if ($extra) {
+        $imgs = array_merge($imgs, $extra);
+    } else {
+        foreach (['image2', 'image3'] as $k) {
+            if (!empty($product[$k])) $imgs[] = $product[$k];
+        }
+    }
+    return array_values(array_unique(array_filter($imgs)));
 }

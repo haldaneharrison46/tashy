@@ -66,19 +66,16 @@ require_once __DIR__ . '/includes/header.php';
 
   <div class="pdp-layout">
     <!-- Gallery -->
+    <?php $gallery = product_gallery($product); $mainImg = $gallery[0] ?? $product['image']; ?>
     <div class="pdp-gallery">
       <div class="pdp-main-img" id="pdpMainImg">
-        <img src="<?= product_img($product['image']) ?>" alt="<?= h($product['name']) ?>" id="mainProductImg">
+        <img src="<?= product_img($mainImg) ?>" alt="<?= h($product['name']) ?>" id="mainProductImg">
       </div>
-      <?php if ($product['image2'] || $product['image3']): ?>
+      <?php if (count($gallery) > 1): ?>
       <div class="pdp-thumb-row">
-        <img src="<?= product_img($product['image']) ?>" class="pdp-thumb active" onclick="switchImg(this, '<?= product_img($product['image']) ?>')">
-        <?php if ($product['image2']): ?>
-        <img src="<?= product_img($product['image2']) ?>" class="pdp-thumb" onclick="switchImg(this, '<?= product_img($product['image2']) ?>')">
-        <?php endif; ?>
-        <?php if ($product['image3']): ?>
-        <img src="<?= product_img($product['image3']) ?>" class="pdp-thumb" onclick="switchImg(this, '<?= product_img($product['image3']) ?>')">
-        <?php endif; ?>
+        <?php foreach ($gallery as $i => $g): ?>
+        <img src="<?= product_img($g) ?>" class="pdp-thumb<?= $i === 0 ? ' active' : '' ?>" alt="<?= h($product['name']) ?> image <?= $i + 1 ?>" onclick="switchImg(this, '<?= product_img($g) ?>')">
+        <?php endforeach; ?>
       </div>
       <?php endif; ?>
     </div>

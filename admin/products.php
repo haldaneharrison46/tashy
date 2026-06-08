@@ -8,10 +8,27 @@ $editId = (int)($_GET['id'] ?? 0);
 
 $categories = $pdo->query("SELECT * FROM categories ORDER BY name")->fetchAll();
 
-/* ── Handle POST ─────────────────────────────── */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+/* ── Versatile image loader: validate + store an uploaded image ── */
+function pf_save_image(array $file, string $base): array {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return ['skip' => true];
+    if ($file['error'] !== UPLOAD_ERR_OK)       return ['error' => 'Upload failed (code ' . $file['error'] . ').'];
+    if (($file['size'] ?? 0) > 6 * 1024 * 1024) return ['error' => 'An image exceeds the 6 MB limit.'];
+    $info = @getimagesize($file['tmp_name']);
+    $map  = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif', IMAGETYPE_WEBP => 'webp'];
+    $ext  = $info ? ($map[$info[2]] ?? null) : null;
+    if (!$ext) return ['error' => 'Unsupported image type (use JPG, PNG, GIF, WebP).'];
+    $dir = dirname(__DIR__) . '/assets/images';
+    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    $name = (slugify($base) ?: 'product') . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(2)) . '.' . $ext;
+    if (!@move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) return ['error' => 'Could not save the uploaded image.'];
+    return ['ok' => true, 'name' => $name];
+}
+
+/* ── Handle POST (save product) ──────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
     csrf_check();
     $f = $_POST;
+    $errors = [];
 
     $data = [
         'name'        => trim($f['name']        ?? ''),
@@ -27,34 +44,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'featured'    => isset($f['featured']) ? 1 : 0,
     ];
 
-    // Image: keep existing or use new value
-    $data['image'] = trim($f['image'] ?? '');
-    if (empty($data['image'])) $data['image'] = 'placeholder.jpg';
-    // Additional gallery images (optional)
-    $data['image2'] = trim($f['image2'] ?? '');
-    $data['image3'] = trim($f['image3'] ?? '');
+    // Cover image: uploaded file > typed filename/URL > existing > placeholder
+    $coverUp = pf_save_image($_FILES['image_file'] ?? [], $f['name'] ?? 'product');
+    if (!empty($coverUp['ok']))        $data['image'] = $coverUp['name'];
+    else {
+        if (!empty($coverUp['error'])) $errors[] = $coverUp['error'];
+        $data['image'] = trim($f['image'] ?? '');
+    }
+    if ($data['image'] === '') $data['image'] = 'placeholder.jpg';
 
     if (!empty($f['product_id'])) {
-        // Update
         $pid = (int)$f['product_id'];
-        $sql = 'UPDATE products SET name=?,brand=?,category_id=?,description=?,price=?,compare_price=?,stock=?,sku=?,tags=?,active=?,featured=?,image=?,image2=?,image3=? WHERE id=?';
+        $sql = 'UPDATE products SET name=?,brand=?,category_id=?,description=?,price=?,compare_price=?,stock=?,sku=?,tags=?,active=?,featured=?,image=? WHERE id=?';
         $pdo->prepare($sql)->execute(array_merge(array_values($data), [$pid]));
-        flash('success', 'Product updated.');
     } else {
-        // Insert
-        $data['slug'] = slugify($data['name']);
-        // Ensure unique slug
-        $cnt = 0;
-        $base = $data['slug'];
-        while ($pdo->prepare("SELECT COUNT(*) FROM products WHERE slug=?")->execute([$data['slug']]) && $pdo->query("SELECT COUNT(*) FROM products WHERE slug='{$data['slug']}'")->fetchColumn() > 0) {
-            $cnt++;
-            $data['slug'] = $base . '-' . $cnt;
-        }
-        $sql = 'INSERT INTO products (name,brand,category_id,description,price,compare_price,stock,sku,tags,active,featured,image,image2,image3,slug) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
-        $pdo->prepare($sql)->execute([$data['name'],$data['brand'],$data['category_id'],$data['description'],$data['price'],$data['compare_price'],$data['stock'],$data['sku'],$data['tags'],$data['active'],$data['featured'],$data['image'],$data['image2'],$data['image3'],$data['slug']]);
-        flash('success', 'Product added.');
+        $data['slug'] = slugify($data['name']) ?: 'product';
+        $base = $data['slug']; $cnt = 0;
+        $chk = $pdo->prepare("SELECT COUNT(*) FROM products WHERE slug=?");
+        do { $chk->execute([$data['slug']]); $dupe = (int)$chk->fetchColumn(); if ($dupe) $data['slug'] = $base . '-' . (++$cnt); } while ($dupe);
+        $sql = 'INSERT INTO products (name,brand,category_id,description,price,compare_price,stock,sku,tags,active,featured,image,slug) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)';
+        $pdo->prepare($sql)->execute([$data['name'],$data['brand'],$data['category_id'],$data['description'],$data['price'],$data['compare_price'],$data['stock'],$data['sku'],$data['tags'],$data['active'],$data['featured'],$data['image'],$data['slug']]);
+        $pid = (int)$pdo->lastInsertId();
     }
-    redirect(SITE_URL . '/admin/products.php');
+
+    // Gallery: remove selected images
+    if (!empty($f['del_img']) && is_array($f['del_img'])) {
+        $ids = array_values(array_filter(array_map('intval', $f['del_img'])));
+        if ($ids) {
+            $place = implode(',', array_fill(0, count($ids), '?'));
+            $pdo->prepare("DELETE FROM product_images WHERE product_id=? AND id IN ($place)")->execute(array_merge([$pid], $ids));
+        }
+    }
+    // Gallery: add newly uploaded images
+    if (!empty($_FILES['gallery']) && is_array($_FILES['gallery']['name'] ?? null)) {
+        $sn = $pdo->prepare("SELECT COALESCE(MAX(sort_order),0) FROM product_images WHERE product_id=?");
+        $sn->execute([$pid]); $next = (int)$sn->fetchColumn();
+        $ins = $pdo->prepare("INSERT INTO product_images (product_id, filename, sort_order) VALUES (?,?,?)");
+        foreach ($_FILES['gallery']['name'] as $i => $_nm) {
+            $one = [
+                'name' => $_FILES['gallery']['name'][$i],   'type' => $_FILES['gallery']['type'][$i] ?? '',
+                'tmp_name' => $_FILES['gallery']['tmp_name'][$i], 'error' => $_FILES['gallery']['error'][$i],
+                'size' => $_FILES['gallery']['size'][$i],
+            ];
+            $r = pf_save_image($one, $f['name'] ?? 'product');
+            if (!empty($r['ok']))        $ins->execute([$pid, $r['name'], ++$next]);
+            elseif (!empty($r['error'])) $errors[] = $r['error'];
+        }
+    }
+
+    if ($errors) flash('error', implode(' ', array_unique($errors)));
+    flash('success', !empty($f['product_id']) ? 'Product saved.' : 'Product added.');
+    redirect(SITE_URL . '/admin/products.php' . (!empty($f['product_id']) ? '?action=edit&id=' . $pid : ''));
 }
 
 /* ── Delete ──────────────────────────────────── */
@@ -89,6 +129,8 @@ if ($action === 'add' || $editProduct) {
     // Show add/edit form
     $p = $editProduct ?? ['name'=>'','brand'=>'','category_id'=>0,'description'=>'','price'=>'','compare_price'=>'','stock'=>0,'sku'=>'','tags'=>'','active'=>1,'featured'=>0,'image'=>'','image2'=>'','image3'=>''];
     $formTitle = $editProduct ? 'Edit Product' : 'Add New Product';
+    $existingImgs = $editProduct ? get_product_images((int)$editProduct['id']) : [];
+    $formErr = flash('error');
 ?>
 <div style="max-width:760px">
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
@@ -96,8 +138,10 @@ if ($action === 'add' || $editProduct) {
   </div>
   <div class="admin-card">
     <h2><?= $formTitle ?></h2>
-    <form method="post">
+    <?php if ($formErr): ?><div class="badge-danger" style="padding:10px 14px;border-radius:8px;margin-bottom:14px;display:block"><?= h($formErr) ?></div><?php endif; ?>
+    <form method="post" enctype="multipart/form-data">
       <?= csrf_field() ?>
+      <input type="hidden" name="save_product" value="1">
       <?php if ($editProduct): ?><input type="hidden" name="product_id" value="<?= $editProduct['id'] ?>"><?php endif; ?>
       <div class="admin-form-grid">
         <div class="form-group full">
@@ -141,17 +185,37 @@ if ($action === 'add' || $editProduct) {
           <label class="form-label">Tags (comma-separated)</label>
           <input type="text" name="tags" class="form-control" value="<?= h($p['tags']) ?>">
         </div>
+        <!-- Cover image -->
         <div class="form-group full">
-          <label class="form-label">Main image filename (in assets/images/)</label>
-          <input type="text" name="image" class="form-control" placeholder="e.g. shea-butter.jpg" value="<?= h($p['image']) ?>">
+          <label class="form-label">Cover image</label>
+          <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
+            <img id="coverPreview" src="<?= h(product_img($p['image'] ?: 'placeholder.svg')) ?>" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--grey-light);background:#f6f6f6" onerror="this.style.opacity=.25">
+            <div style="flex:1;min-width:220px">
+              <input type="file" name="image_file" accept="image/*" class="form-control" onchange="pfPreviewCover(this)">
+              <input type="text" name="image" class="form-control" placeholder="…or a filename in assets/images, or a full image URL" value="<?= h($p['image']) ?>" style="margin-top:8px">
+              <p style="font-size:0.75rem;color:#888;margin-top:4px">Upload a file (JPG/PNG/GIF/WebP, ≤6 MB), or type a filename/URL. Uploading wins.</p>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Image 2 (optional)</label>
-          <input type="text" name="image2" class="form-control" placeholder="e.g. shea-butter-2.jpg" value="<?= h($p['image2'] ?? '') ?>">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Image 3 (optional)</label>
-          <input type="text" name="image3" class="form-control" placeholder="e.g. shea-butter-3.jpg" value="<?= h($p['image3'] ?? '') ?>">
+
+        <!-- Gallery -->
+        <div class="form-group full">
+          <label class="form-label">Gallery images <span style="color:#888;font-weight:400">(extra photos shown on the product page)</span></label>
+          <?php if (!empty($existingImgs)): ?>
+          <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:10px">
+            <?php foreach ($existingImgs as $gi): ?>
+            <div style="text-align:center">
+              <img src="<?= h(product_img($gi['filename'])) ?>" alt="" style="width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--grey-light);display:block">
+              <label style="display:inline-flex;align-items:center;gap:4px;font-size:0.72rem;color:#c0392b;margin-top:3px;cursor:pointer">
+                <input type="checkbox" name="del_img[]" value="<?= (int)$gi['id'] ?>"> remove
+              </label>
+            </div>
+            <?php endforeach; ?>
+          </div>
+          <?php endif; ?>
+          <input type="file" name="gallery[]" accept="image/*" multiple class="form-control" onchange="pfPreviewGallery(this)">
+          <div id="galleryPreview" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px"></div>
+          <p style="font-size:0.75rem;color:#888;margin-top:4px">Select one or more images to add to this product's gallery.</p>
         </div>
         <div class="form-group full" style="display:flex;gap:24px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
@@ -169,6 +233,22 @@ if ($action === 'add' || $editProduct) {
     </form>
   </div>
 </div>
+<script>
+function pfPreviewCover(input){
+  var f = input.files && input.files[0]; if(!f) return;
+  var img = document.getElementById('coverPreview');
+  img.src = URL.createObjectURL(f); img.style.opacity = 1;
+}
+function pfPreviewGallery(input){
+  var box = document.getElementById('galleryPreview'); box.innerHTML = '';
+  Array.prototype.forEach.call(input.files, function(f){
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--grey-light)';
+    box.appendChild(img);
+  });
+}
+</script>
 <?php } else { // List view
 $ok  = flash('success'); ?>
 <?php if ($ok): ?>
@@ -199,7 +279,7 @@ $ok  = flash('success'); ?>
     <tbody>
     <?php foreach ($products as $p): ?>
     <tr>
-      <td><img src="../<?= product_img($p['image']) ?>" style="width:40px;height:40px;object-fit:cover;border-radius:6px" alt="" onerror="this.style.display='none'"></td>
+      <td><img src="<?= product_img($p['image']) ?>" style="width:40px;height:40px;object-fit:cover;border-radius:6px" alt="" onerror="this.style.display='none'"></td>
       <td>
         <div style="font-weight:600"><?= h($p['name']) ?></div>
         <div style="font-size:0.75rem;color:#888"><?= h($p['brand']) ?> <?= $p['sku'] ? '· '.$p['sku'] : '' ?></div>
