@@ -4,69 +4,130 @@
 // ============================================================
 require_once __DIR__ . '/functions.php';
 
-/* ── Low-level Claude Messages API call (raw cURL) ────────────
-   The project has no Composer/SDK, so we call the REST endpoint
-   directly. Model + key come from editable settings.            */
-function anthropic_call(array $messages, ?string $system = null, int $maxTokens = 1024, ?array $outputFormat = null): array {
-    $key = trim((string) get_setting('anthropic_api_key', ''));
-    if ($key === '') return ['ok' => false, 'error' => 'No Anthropic API key set. Add one under Marketing → AI & Connections.'];
-    $model = trim((string) get_setting('marketing_ai_model', 'claude-opus-4-8')) ?: 'claude-opus-4-8';
+/* ── AI provider config ───────────────────────────────────────
+   Default is a FREE OpenAI-compatible endpoint (Groq). The same
+   path also works with OpenRouter free models, Together, a local
+   server, or a keyless endpoint (e.g. Pollinations). Switch to
+   'anthropic' in settings to use a paid Claude key instead.      */
+function ai_provider_cfg(): array {
+    $provider = get_setting('ai_provider', 'openai');
+    if ($provider === 'anthropic') {
+        return [
+            'provider' => 'anthropic',
+            'key'      => trim((string) get_setting('anthropic_api_key', '')),
+            'model'    => trim((string) get_setting('marketing_ai_model', 'claude-opus-4-8')) ?: 'claude-opus-4-8',
+        ];
+    }
+    return [
+        'provider' => 'openai',
+        'base'     => rtrim(trim((string) get_setting('ai_base_url', 'https://api.groq.com/openai/v1')), '/'),
+        'key'      => trim((string) get_setting('ai_api_key', '')),
+        'model'    => trim((string) get_setting('ai_model', 'llama-3.3-70b-versatile')) ?: 'llama-3.3-70b-versatile',
+    ];
+}
 
-    $payload = ['model' => $model, 'max_tokens' => $maxTokens, 'messages' => $messages];
-    if ($system)        $payload['system'] = $system;
-    if ($outputFormat)  $payload['output_config'] = ['format' => $outputFormat];
-    // Note: Opus 4.8 rejects temperature/top_p/top_k — do not send them.
+function ai_available(): bool {
+    $c = ai_provider_cfg();
+    if ($c['provider'] === 'anthropic') return $c['key'] !== '';
+    // OpenAI-compatible: a key may be optional (keyless endpoints); base + model are required.
+    return $c['base'] !== '' && $c['model'] !== '';
+}
 
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_POST           => true,
-        CURLOPT_TIMEOUT        => 45,
-        CURLOPT_POSTFIELDS     => json_encode($payload),
-        CURLOPT_HTTPHEADER     => [
-            'x-api-key: ' . $key,
-            'anthropic-version: 2023-06-01',
-            'content-type: application/json',
-        ],
-    ]);
-    $resp = curl_exec($ch);
-    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $cerr = curl_error($ch);
-    curl_close($ch);
+// Pull a JSON object out of possibly-noisy model output.
+function ai_json(string $text) {
+    $d = json_decode($text, true);
+    if (is_array($d)) return $d;
+    if (preg_match('/\{.*\}/s', $text, $m)) {
+        $d = json_decode($m[0], true);
+        if (is_array($d)) return $d;
+    }
+    return null;
+}
 
-    if ($resp === false) return ['ok' => false, 'error' => 'Network error contacting Claude: ' . $cerr];
+/* ── Provider-agnostic completion (raw cURL, no SDK) ──────────*/
+function ai_complete(string $user, ?string $system = null, bool $wantJson = false, int $maxTokens = 1300): array {
+    $c = ai_provider_cfg();
+    if ($wantJson) $user .= "\n\nReturn ONLY valid minified JSON — no markdown fences, no commentary.";
+
+    if ($c['provider'] === 'anthropic') {
+        if ($c['key'] === '') return ['ok' => false, 'error' => 'No Anthropic API key set.'];
+        $payload = ['model' => $c['model'], 'max_tokens' => $maxTokens, 'messages' => [['role' => 'user', 'content' => $user]]];
+        if ($system) $payload['system'] = $system;
+        $ch = curl_init('https://api.anthropic.com/v1/messages');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 45,
+            CURLOPT_POSTFIELDS => json_encode($payload),
+            CURLOPT_HTTPHEADER => ['x-api-key: ' . $c['key'], 'anthropic-version: 2023-06-01', 'content-type: application/json'],
+        ]);
+        $resp = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); $err = curl_error($ch); curl_close($ch);
+        if ($resp === false) return ['ok' => false, 'error' => 'Network error: ' . $err];
+        $data = json_decode($resp, true);
+        if ($code !== 200) return ['ok' => false, 'error' => 'Claude API ' . $code . ': ' . ($data['error']['message'] ?? substr((string)$resp, 0, 200))];
+        $text = '';
+        foreach (($data['content'] ?? []) as $b) { if (($b['type'] ?? '') === 'text') { $text = $b['text']; break; } }
+        return ['ok' => true, 'text' => $text];
+    }
+
+    // OpenAI-compatible: POST {base}/chat/completions
+    $msgs = [];
+    if ($system) $msgs[] = ['role' => 'system', 'content' => $system];
+    $msgs[] = ['role' => 'user', 'content' => $user];
+    $payload = ['model' => $c['model'], 'messages' => $msgs, 'max_tokens' => $maxTokens];
+    if ($wantJson) $payload['response_format'] = ['type' => 'json_object'];
+    $headers = ['content-type: application/json'];
+    if ($c['key'] !== '') $headers[] = 'Authorization: Bearer ' . $c['key'];
+
+    $post = function ($pl) use ($c, $headers) {
+        $ch = curl_init($c['base'] . '/chat/completions');
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true, CURLOPT_POST => true, CURLOPT_TIMEOUT => 45,
+            CURLOPT_POSTFIELDS => json_encode($pl), CURLOPT_HTTPHEADER => $headers,
+        ]);
+        $r = curl_exec($ch); $code = curl_getinfo($ch, CURLINFO_HTTP_CODE); $e = curl_error($ch); curl_close($ch);
+        return [$r, $code, $e];
+    };
+
+    [$resp, $code, $err] = $post($payload);
+    if ($resp === false) return ['ok' => false, 'error' => 'Network error contacting AI: ' . $err];
     $data = json_decode($resp, true);
-    if ($code !== 200) {
-        return ['ok' => false, 'error' => 'Claude API ' . $code . ': ' . ($data['error']['message'] ?? substr((string)$resp, 0, 300))];
+    // Some free endpoints reject response_format — retry once without it.
+    if ($code !== 200 && $wantJson && stripos((string)$resp, 'response_format') !== false) {
+        unset($payload['response_format']);
+        [$resp, $code, $err] = $post($payload);
+        $data = json_decode($resp, true);
     }
-    $text = '';
-    foreach (($data['content'] ?? []) as $b) {
-        if (($b['type'] ?? '') === 'text') { $text = $b['text']; break; }
-    }
-    return ['ok' => true, 'text' => $text, 'usage' => $data['usage'] ?? null];
+    if ($code !== 200) return ['ok' => false, 'error' => 'AI API ' . $code . ': ' . ($data['error']['message'] ?? substr((string)$resp, 0, 200))];
+    $text = $data['choices'][0]['message']['content'] ?? '';
+    if ($text === '') return ['ok' => false, 'error' => 'AI returned an empty response.'];
+    return ['ok' => true, 'text' => $text];
 }
 
 /* ── Generate marketing copy variants ─────────────────────────
-   $opts: product (array|null), topic (string), platform, tone, count */
+   $opts: products (array of product rows), topic, platform, tone, count */
 function ai_generate_copy(array $opts): array {
+    if (!ai_available()) return ['ok' => false, 'error' => 'AI is not configured. Set a model/key under Marketing → AI & Connections.'];
     $platform = $opts['platform'] ?? 'instagram';
     $tone     = $opts['tone']     ?? 'warm and inviting';
     $count    = max(1, min(5, (int)($opts['count'] ?? 3)));
     $voice    = trim((string) get_setting('brand_voice', ''));
 
     $store = defined('SITE_NAME') ? SITE_NAME : 'our store';
-    $ctx = "You write social media marketing copy for {$store}, a home décor & fragrances boutique in Falmouth, Jamaica. "
+    $ctx = "You are a social media marketer for {$store}, a home décor & fragrances boutique in Falmouth, Jamaica. "
          . "Prices are in Jamaican dollars (J\$). Audience: Jamaican and Caribbean home shoppers.";
     if ($voice !== '') $ctx .= " Brand voice notes: {$voice}.";
 
+    // Accept either a list of products or a single product (back-compat) or a topic.
+    $products = $opts['products'] ?? (!empty($opts['product']) ? [$opts['product']] : []);
     $subject = '';
-    if (!empty($opts['product']) && is_array($opts['product'])) {
-        $p = $opts['product'];
-        $subject = "Promote this specific product:\n"
-                 . "- Name: {$p['name']}\n"
-                 . (isset($p['brand']) && $p['brand'] !== '' ? "- Brand: {$p['brand']}\n" : '')
-                 . (isset($p['price']) ? "- Price: J\$" . number_format((float)$p['price'], 0) . "\n" : '')
-                 . (isset($p['description']) && $p['description'] !== '' ? "- Description: " . mb_substr($p['description'], 0, 400) . "\n" : '');
+    if (is_array($products) && count($products)) {
+        $lines = [];
+        foreach ($products as $p) {
+            $lines[] = "- {$p['name']}"
+                . (isset($p['brand']) && $p['brand'] !== '' ? " by {$p['brand']}" : '')
+                . (isset($p['price']) ? " (J\$" . number_format((float)$p['price'], 0) . ")" : '')
+                . (isset($p['description']) && $p['description'] !== '' ? " — " . mb_substr($p['description'], 0, 160) : '');
+        }
+        $subject = (count($products) > 1 ? "Build one ad that features these products together:\n" : "Promote this product:\n") . implode("\n", $lines);
     } elseif (!empty($opts['topic'])) {
         $subject = "Topic / promotion to write about: " . $opts['topic'];
     } else {
@@ -75,43 +136,40 @@ function ai_generate_copy(array $opts): array {
 
     $user = $subject . "\n\n"
           . "Write {$count} distinct {$platform} post option(s) in a {$tone} tone. "
-          . "Each caption should be ready to post (you may use 1-3 tasteful emoji), 1-3 short sentences, with a soft call to action. "
-          . "Also give 5-10 relevant hashtags per option (no '#' duplicates, lowercase, no spaces).";
+          . "Each caption: ready to post, 1-3 short sentences, 1-3 tasteful emoji, a soft call to action. "
+          . "Also give 5-10 lowercase hashtags (no spaces, no duplicates) per option. "
+          . 'Respond as JSON exactly like {"variants":[{"caption":"...","hashtags":["tag1","tag2"]}]}.';
 
-    $schema = [
-        'type' => 'json_schema',
-        'schema' => [
-            'type' => 'object',
-            'additionalProperties' => false,
-            'required' => ['variants'],
-            'properties' => [
-                'variants' => [
-                    'type' => 'array',
-                    'items' => [
-                        'type' => 'object',
-                        'additionalProperties' => false,
-                        'required' => ['caption', 'hashtags'],
-                        'properties' => [
-                            'caption'  => ['type' => 'string'],
-                            'hashtags' => ['type' => 'array', 'items' => ['type' => 'string']],
-                        ],
-                    ],
-                ],
-            ],
-        ],
-    ];
-
-    $res = anthropic_call(
-        [['role' => 'user', 'content' => $user]],
-        $ctx, 1200, $schema
-    );
+    $res = ai_complete($user, $ctx, true, 1300);
     if (!$res['ok']) return $res;
+    $parsed = ai_json($res['text']);
+    if (!$parsed || empty($parsed['variants'])) return ['ok' => false, 'error' => 'AI returned an unexpected format. Try again.'];
+    return ['ok' => true, 'variants' => $parsed['variants']];
+}
 
-    $parsed = json_decode($res['text'], true);
-    if (!is_array($parsed) || empty($parsed['variants'])) {
-        return ['ok' => false, 'error' => 'AI returned an unexpected format. Try again.'];
+/* ── AI suggests which products to promote right now ──────────*/
+function ai_suggest_products(array $products, int $n = 4): array {
+    if (!ai_available()) return ['ok' => false, 'error' => 'AI is not configured.'];
+    if (empty($products)) return ['ok' => false, 'error' => 'No products to choose from.'];
+    $lines = [];
+    foreach ($products as $p) {
+        $onSale = (!empty($p['compare_price']) && (float)$p['compare_price'] > (float)$p['price']);
+        $lines[] = "id={$p['id']} | {$p['name']} | J\$" . number_format((float)$p['price'], 0)
+                 . " | stock={$p['stock']}"
+                 . (!empty($p['featured']) ? " | featured" : '')
+                 . ($onSale ? " | on-sale" : '')
+                 . (!empty($p['tags']) ? " | " . $p['tags'] : '');
     }
-    return ['ok' => true, 'variants' => $parsed['variants'], 'usage' => $res['usage'] ?? null];
+    $store = defined('SITE_NAME') ? SITE_NAME : 'the store';
+    $user = "From {$store}'s catalogue below, choose the {$n} products most worth promoting on social media right now "
+          . "(favour sale items, featured products, healthy stock, and broad appeal). Give a one-line reason for each.\n\n"
+          . implode("\n", $lines)
+          . "\n\nRespond as JSON exactly like {\"picks\":[{\"id\":12,\"reason\":\"...\"}]}.";
+    $res = ai_complete($user, "You are a retail marketing strategist. Be selective and practical.", true, 700);
+    if (!$res['ok']) return $res;
+    $parsed = ai_json($res['text']);
+    if (!$parsed || empty($parsed['picks'])) return ['ok' => false, 'error' => 'AI returned an unexpected format. Try again.'];
+    return ['ok' => true, 'picks' => $parsed['picks']];
 }
 
 /* ── Publish: generic automation webhook (Zapier/Make/Buffer) ── */

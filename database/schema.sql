@@ -198,6 +198,7 @@ CREATE TABLE IF NOT EXISTS marketing_posts (
   link_url     VARCHAR(500)  DEFAULT NULL,
   platforms    VARCHAR(200)  DEFAULT NULL,        -- comma: facebook,instagram,twitter,whatsapp,webhook
   product_id   INT UNSIGNED  DEFAULT NULL,
+  product_ids  VARCHAR(255)  DEFAULT NULL,        -- comma list of featured product ids
   status       ENUM('draft','scheduled','published','failed') NOT NULL DEFAULT 'draft',
   scheduled_at DATETIME      DEFAULT NULL,
   published_at DATETIME      DEFAULT NULL,
@@ -218,7 +219,10 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT IGNORE INTO settings (skey, sval) VALUES
   ('default_shipping_rate',   '1500'),
   ('free_shipping_threshold', '5000'),
-  ('marketing_ai_model',      'claude-opus-4-8');
+  ('marketing_ai_model',      'claude-opus-4-8'),
+  ('ai_provider',             'openai'),
+  ('ai_base_url',             'https://api.groq.com/openai/v1'),
+  ('ai_model',                'llama-3.3-70b-versatile');
 
 -- Shipping zones
 INSERT IGNORE INTO shipping_zones (id, name, parishes, rate, free_threshold, active, sort_order) VALUES

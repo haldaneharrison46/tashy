@@ -12,7 +12,13 @@ $PLATFORMS = ['facebook'=>'Facebook','instagram'=>'Instagram','twitter'=>'Twitte
 /* ── Save AI & connection settings ─────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     csrf_check();
-    // keep existing API key if the field is left blank (so it isn't wiped)
+    // Provider + free (OpenAI-compatible) settings
+    set_setting('ai_provider', in_array($_POST['ai_provider'] ?? '', ['openai','anthropic'], true) ? $_POST['ai_provider'] : 'openai');
+    set_setting('ai_base_url', trim($_POST['ai_base_url'] ?? '') ?: 'https://api.groq.com/openai/v1');
+    set_setting('ai_model',    trim($_POST['ai_model'] ?? '') ?: 'llama-3.3-70b-versatile');
+    $newAiKey = trim($_POST['ai_api_key'] ?? '');           // blank = keep current
+    if ($newAiKey !== '') set_setting('ai_api_key', $newAiKey);
+    // keep existing Anthropic key if the field is left blank (so it isn't wiped)
     $newKey = trim($_POST['anthropic_api_key'] ?? '');
     if ($newKey !== '') set_setting('anthropic_api_key', $newKey);
     set_setting('marketing_ai_model', in_array($_POST['marketing_ai_model'] ?? '', ['claude-opus-4-8','claude-sonnet-4-6','claude-haiku-4-5'], true) ? $_POST['marketing_ai_model'] : 'claude-opus-4-8');
@@ -34,7 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_post'])) {
     $hashtags  = trim($_POST['hashtags'] ?? '');
     $image     = trim($_POST['image'] ?? '');
     $link      = trim($_POST['link_url'] ?? '');
-    $productId = (int)($_POST['product_id'] ?? 0) ?: null;
+    $prodIdArr = array_values(array_filter(array_map('intval', (array)($_POST['product_ids'] ?? []))));
+    $prodIds   = implode(',', $prodIdArr);
+    $productId  = $prodIdArr[0] ?? null;
     $platforms = implode(',', array_values(array_intersect(array_keys($PLATFORMS), (array)($_POST['platforms'] ?? []))));
     $mode      = $_POST['mode'] ?? 'draft'; // draft | schedule | publish
     $schedRaw  = trim($_POST['scheduled_at'] ?? '');
@@ -44,11 +52,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_post'])) {
 
     $status = $mode === 'schedule' ? 'scheduled' : 'draft';
     if ($id) {
-        $pdo->prepare('UPDATE marketing_posts SET title=?,body=?,hashtags=?,image=?,link_url=?,platforms=?,product_id=?,status=?,scheduled_at=? WHERE id=?')
-            ->execute([$title,$body,$hashtags,$image,$link,$platforms,$productId,$status,$schedAt,$id]);
+        $pdo->prepare('UPDATE marketing_posts SET title=?,body=?,hashtags=?,image=?,link_url=?,platforms=?,product_id=?,product_ids=?,status=?,scheduled_at=? WHERE id=?')
+            ->execute([$title,$body,$hashtags,$image,$link,$platforms,$productId,$prodIds,$status,$schedAt,$id]);
     } else {
-        $pdo->prepare('INSERT INTO marketing_posts (title,body,hashtags,image,link_url,platforms,product_id,status,scheduled_at,created_by) VALUES (?,?,?,?,?,?,?,?,?,?)')
-            ->execute([$title,$body,$hashtags,$image,$link,$platforms,$productId,$status,$schedAt,current_user()['id']]);
+        $pdo->prepare('INSERT INTO marketing_posts (title,body,hashtags,image,link_url,platforms,product_id,product_ids,status,scheduled_at,created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)')
+            ->execute([$title,$body,$hashtags,$image,$link,$platforms,$productId,$prodIds,$status,$schedAt,current_user()['id']]);
         $id = (int)$pdo->lastInsertId();
     }
 
@@ -86,15 +94,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
     redirect(SITE_URL . '/admin/marketing.php');
 }
 
-$products = $pdo->query("SELECT id, name FROM products WHERE active=1 ORDER BY name")->fetchAll();
-$hasKey   = trim((string) get_setting('anthropic_api_key','')) !== '';
+$products = $pdo->query("SELECT id, name, brand, price, image FROM products WHERE active=1 ORDER BY name")->fetchAll();
+$aiReady  = ai_available();
 $statusColors = ['draft'=>'grey','scheduled'=>'warning','published'=>'success','failed'=>'danger'];
 
 /* ════════════════ COMPOSER (new / edit) ════════════════ */
 if ($action === 'new' || ($editId && ($action === 'edit'))) {
-    $p = ['id'=>0,'title'=>'','body'=>'','hashtags'=>'','image'=>'','link_url'=>'','platforms'=>'','product_id'=>0,'scheduled_at'=>''];
+    $p = ['id'=>0,'title'=>'','body'=>'','hashtags'=>'','image'=>'','link_url'=>'','platforms'=>'','product_ids'=>'','scheduled_at'=>''];
     if ($editId) { $st = $pdo->prepare('SELECT * FROM marketing_posts WHERE id=?'); $st->execute([$editId]); $p = $st->fetch() ?: $p; }
-    $sel = array_filter(array_map('trim', explode(',', $p['platforms'] ?? '')));
+    $sel     = array_filter(array_map('trim', explode(',', $p['platforms'] ?? '')));
+    $selProd = array_filter(array_map('trim', explode(',', $p['product_ids'] ?? '')));
     $err = flash('error');
 ?>
 <div style="margin-bottom:18px"><a href="marketing.php" style="color:var(--rose-gold)">&larr; Back to Marketing</a></div>
@@ -108,6 +117,21 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
       <?= csrf_field() ?>
       <input type="hidden" name="save_post" value="1">
       <input type="hidden" name="post_id" value="<?= (int)$p['id'] ?>">
+
+      <!-- Product picker -->
+      <div class="form-group">
+        <label class="form-label">Featured products <span style="color:#888;font-weight:400">(pick any to build an ad around)</span></label>
+        <input type="text" id="prodSearch" class="form-control" placeholder="🔍 filter products…" style="margin-bottom:6px">
+        <div id="prodList" style="max-height:170px;overflow:auto;border:1px solid var(--grey-light);border-radius:8px;padding:8px;display:grid;grid-template-columns:1fr 1fr;gap:4px">
+          <?php foreach ($products as $pr): ?>
+          <label class="prodRow" data-name="<?= h(mb_strtolower($pr['name'])) ?>" style="display:flex;align-items:center;gap:6px;font-size:0.82rem;cursor:pointer;padding:2px 4px;border-radius:5px">
+            <input type="checkbox" class="prodCb" name="product_ids[]" value="<?= $pr['id'] ?>" data-image="<?= h($pr['image']) ?>" <?= in_array((string)$pr['id'],$selProd,true)?'checked':'' ?>>
+            <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= h($pr['name']) ?></span>
+          </label>
+          <?php endforeach; ?>
+        </div>
+      </div>
+
       <div class="form-group"><label class="form-label">Internal title (optional)</label>
         <input type="text" name="title" class="form-control" value="<?= h($p['title']) ?>" placeholder="e.g. Weekend candle promo"></div>
       <div class="form-group"><label class="form-label">Post text *</label>
@@ -116,7 +140,7 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
         <input type="text" name="hashtags" id="mTags" class="form-control" value="<?= h($p['hashtags']) ?>" placeholder="#homedecor #jamaica"></div>
       <div class="admin-form-grid">
         <div class="form-group"><label class="form-label">Image (filename in assets/images, or full URL)</label>
-          <input type="text" name="image" class="form-control" value="<?= h($p['image']) ?>" placeholder="candle-1.jpg"></div>
+          <input type="text" name="image" id="mImage" class="form-control" value="<?= h($p['image']) ?>" placeholder="candle-1.jpg"></div>
         <div class="form-group"><label class="form-label">Link URL</label>
           <input type="text" name="link_url" class="form-control" value="<?= h($p['link_url'] ?: SITE_URL) ?>"></div>
       </div>
@@ -142,16 +166,14 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
 
   <!-- AI assistant -->
   <div class="admin-card">
-    <h2>✨ AI Copywriter</h2>
-    <?php if (!$hasKey): ?>
-      <p style="font-size:0.84rem;color:#c0392b">Add an Anthropic API key under <a href="marketing.php#connections" style="color:var(--rose-gold)">AI &amp; Connections</a> to enable AI generation.</p>
+    <h2>✨ AI Ad Builder</h2>
+    <?php if (!$aiReady): ?>
+      <p style="font-size:0.84rem;color:#c0392b">Configure a (free) AI model under <a href="marketing.php#connections" style="color:var(--rose-gold)">AI &amp; Connections</a> to enable generation.</p>
     <?php else: ?>
-    <div class="form-group"><label class="form-label">About a product (optional)</label>
-      <select id="aiProduct" class="form-control">
-        <option value="0">— General / use topic below —</option>
-        <?php foreach ($products as $pr): ?><option value="<?= $pr['id'] ?>"><?= h($pr['name']) ?></option><?php endforeach; ?>
-      </select></div>
-    <div class="form-group"><label class="form-label">Or a topic / promo</label>
+    <p style="font-size:0.82rem;color:#888;margin-bottom:10px">Tick products on the left, then build an ad — or let AI pick what to promote.</p>
+    <button type="button" class="btn btn-outline" id="aiSuggest" style="width:100%;margin-bottom:8px">💡 Suggest products to promote</button>
+    <div id="aiSuggestOut" style="margin-bottom:10px"></div>
+    <div class="form-group"><label class="form-label">Or a topic / promo (if no products picked)</label>
       <input type="text" id="aiTopic" class="form-control" placeholder="e.g. Mother's Day gift sets, 10% off"></div>
     <div class="admin-form-grid">
       <div class="form-group"><label class="form-label">Platform</label>
@@ -167,7 +189,7 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
           <option value="urgent, sale-focused">Sale / urgent</option>
         </select></div>
     </div>
-    <button type="button" class="btn btn-primary" id="aiGen" style="width:100%">Generate 3 options</button>
+    <button type="button" class="btn btn-primary" id="aiGen" style="width:100%">⚡ Build ad (3 options)</button>
     <div id="aiOut" style="margin-top:14px"></div>
     <?php endif; ?>
   </div>
@@ -175,41 +197,81 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
 
 <script>
 const CSRF = <?= json_encode(csrf_token()) ?>;
+const API  = '<?= SITE_URL ?>/api/marketing_ai.php';
+const checkedProductIds = () => [...document.querySelectorAll('.prodCb:checked')].map(c => c.value);
+
+// product list filter
+const ps = document.getElementById('prodSearch');
+if (ps) ps.addEventListener('input', e => {
+  const f = e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#prodList .prodRow').forEach(r => {
+    r.style.display = (!f || r.dataset.name.includes(f)) ? '' : 'none';
+  });
+});
+
+// when picking products, auto-fill image from the first checked product if image is empty
+document.querySelectorAll('.prodCb').forEach(cb => cb.addEventListener('change', () => {
+  const img = document.getElementById('mImage');
+  const first = document.querySelector('.prodCb:checked');
+  if (img && !img.value && first && first.dataset.image) img.value = first.dataset.image;
+}));
+
+async function callAI(payload, btn, busyText) {
+  const orig = btn.textContent; btn.disabled = true; btn.textContent = busyText;
+  try {
+    const r = await fetch(API, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(Object.assign({csrf: CSRF}, payload)) });
+    return await r.json();
+  } catch (e) { return {ok:false, error:e.message}; }
+  finally { btn.disabled = false; btn.textContent = orig; }
+}
+
+const sugBtn = document.getElementById('aiSuggest');
+if (sugBtn) sugBtn.addEventListener('click', async () => {
+  const out = document.getElementById('aiSuggestOut'); out.innerHTML = '';
+  const data = await callAI({mode:'suggest'}, sugBtn, 'Thinking…');
+  if (!data.ok) { out.innerHTML = '<div style="color:#c0392b;font-size:0.82rem">'+(data.error||'Failed')+'</div>'; return; }
+  // tick suggested products & show reasons
+  document.querySelectorAll('.prodCb').forEach(c => c.checked = false);
+  out.innerHTML = data.picks.map(pk => {
+    const cb = document.querySelector('.prodCb[value="'+pk.id+'"]');
+    if (cb) { cb.checked = true; }
+    const nm = cb ? cb.parentElement.querySelector('span').textContent : ('#'+pk.id);
+    return '<div style="font-size:0.8rem;padding:4px 0;border-bottom:1px solid var(--grey-light)"><strong>'+nm.replace(/</g,'&lt;')+'</strong> — '+(pk.reason||'').replace(/</g,'&lt;')+'</div>';
+  }).join('');
+  const img = document.getElementById('mImage');
+  const first = document.querySelector('.prodCb:checked');
+  if (img && !img.value && first && first.dataset.image) img.value = first.dataset.image;
+});
+
 const genBtn = document.getElementById('aiGen');
 if (genBtn) genBtn.addEventListener('click', async () => {
-  const out = document.getElementById('aiOut');
-  genBtn.disabled = true; genBtn.textContent = 'Generating…'; out.innerHTML = '';
-  try {
-    const r = await fetch('<?= SITE_URL ?>/api/marketing_ai.php', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        csrf: CSRF,
-        product_id: document.getElementById('aiProduct').value,
-        topic: document.getElementById('aiTopic').value,
-        platform: document.getElementById('aiPlatform').value,
-        tone: document.getElementById('aiTone').value, count: 3
-      })
-    });
-    const data = await r.json();
-    if (!data.ok) { out.innerHTML = '<div style="color:#c0392b;font-size:0.85rem">'+ (data.error||'Generation failed') +'</div>'; return; }
-    out.innerHTML = data.variants.map((v,i) => {
-      const tags = (v.hashtags||[]).map(t => t.startsWith('#')?t:('#'+t)).join(' ');
-      const cap = v.caption.replace(/</g,'&lt;');
-      return `<div style="border:1px solid var(--grey-light);border-radius:8px;padding:10px;margin-bottom:10px">
-        <div style="font-size:0.85rem;white-space:pre-wrap">${cap}</div>
-        <div style="font-size:0.78rem;color:#1d4ed8;margin-top:6px">${tags}</div>
-        <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px" data-i="${i}">Use this</button>
-      </div>`;
-    }).join('');
-    out.querySelectorAll('button[data-i]').forEach(b => b.addEventListener('click', () => {
-      const v = data.variants[b.dataset.i];
-      document.getElementById('mBody').value = v.caption;
-      document.getElementById('mTags').value = (v.hashtags||[]).map(t => t.startsWith('#')?t:('#'+t)).join(' ');
-      window.scrollTo({top:0, behavior:'smooth'});
-    }));
-  } catch (e) {
-    out.innerHTML = '<div style="color:#c0392b;font-size:0.85rem">Error: '+ e.message +'</div>';
-  } finally { genBtn.disabled = false; genBtn.textContent = 'Generate 3 options'; }
+  const out = document.getElementById('aiOut'); out.innerHTML = '';
+  const data = await callAI({
+    mode:'generate', product_ids: checkedProductIds(),
+    topic: document.getElementById('aiTopic').value,
+    platform: document.getElementById('aiPlatform').value,
+    tone: document.getElementById('aiTone').value, count: 3
+  }, genBtn, 'Building…');
+  if (!data.ok) { out.innerHTML = '<div style="color:#c0392b;font-size:0.85rem">'+(data.error||'Generation failed')+'</div>'; return; }
+  out.innerHTML = data.variants.map((v,i) => {
+    const tags = (v.hashtags||[]).map(t => t.startsWith('#')?t:('#'+t)).join(' ');
+    const cap = (v.caption||'').replace(/</g,'&lt;');
+    return `<div style="border:1px solid var(--grey-light);border-radius:8px;padding:10px;margin-bottom:10px">
+      <div style="font-size:0.85rem;white-space:pre-wrap">${cap}</div>
+      <div style="font-size:0.78rem;color:#1d4ed8;margin-top:6px">${tags}</div>
+      <button type="button" class="btn btn-outline btn-sm" style="margin-top:8px" data-i="${i}">Use this</button>
+    </div>`;
+  }).join('');
+  out.querySelectorAll('button[data-i]').forEach(b => b.addEventListener('click', () => {
+    const v = data.variants[b.dataset.i];
+    document.getElementById('mBody').value = v.caption || '';
+    document.getElementById('mTags').value = (v.hashtags||[]).map(t => t.startsWith('#')?t:('#'+t)).join(' ');
+    const img = document.getElementById('mImage');
+    const first = document.querySelector('.prodCb:checked');
+    if (img && !img.value && first && first.dataset.image) img.value = first.dataset.image;
+    window.scrollTo({top:0, behavior:'smooth'});
+  }));
 });
 </script>
 <?php require_once __DIR__ . '/footer.php'; exit; }
@@ -305,11 +367,28 @@ $ok = flash('success'); $err = flash('error');
   <form method="post">
     <?= csrf_field() ?>
     <input type="hidden" name="save_settings" value="1">
-    <div class="form-group"><label class="form-label">Anthropic API Key <?= $hasKey ? '<span class="badge badge-success">set</span>' : '<span class="badge badge-grey">not set</span>' ?></label>
-      <input type="password" name="anthropic_api_key" class="form-control" placeholder="<?= $hasKey ? '•••••• (leave blank to keep)' : 'sk-ant-...' ?>" autocomplete="off"></div>
-    <div class="form-group"><label class="form-label">AI Model</label>
+    <?php $prov = get_setting('ai_provider','openai'); $aiKeySet = trim((string)get_setting('ai_api_key',''))!==''; $antKeySet = trim((string)get_setting('anthropic_api_key',''))!==''; ?>
+    <div class="form-group"><label class="form-label">AI Provider</label>
+      <select name="ai_provider" class="form-control" style="max-width:360px">
+        <option value="openai" <?= $prov==='openai'?'selected':'' ?>>Free / OpenAI-compatible (Groq, OpenRouter…)</option>
+        <option value="anthropic" <?= $prov==='anthropic'?'selected':'' ?>>Anthropic Claude (paid key)</option>
+      </select>
+      <p style="font-size:0.78rem;color:#888;margin-top:4px">Free option: grab a no-cost key at <strong>console.groq.com</strong> (default), or point the base URL at any OpenAI-compatible endpoint. Leave the key blank for a keyless endpoint.</p>
+    </div>
+    <div class="admin-form-grid">
+      <div class="form-group"><label class="form-label">Free API base URL</label>
+        <input type="text" name="ai_base_url" class="form-control" value="<?= h(get_setting('ai_base_url','https://api.groq.com/openai/v1')) ?>" placeholder="https://api.groq.com/openai/v1"></div>
+      <div class="form-group"><label class="form-label">Free model</label>
+        <input type="text" name="ai_model" class="form-control" value="<?= h(get_setting('ai_model','llama-3.3-70b-versatile')) ?>" placeholder="llama-3.3-70b-versatile"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Free API key <?= $aiKeySet?'<span class="badge badge-success">set</span>':'<span class="badge badge-grey">not set</span>' ?></label>
+      <input type="password" name="ai_api_key" class="form-control" placeholder="<?= $aiKeySet?'•••••• (leave blank to keep)':'gsk_... (free Groq key)' ?>" autocomplete="off"></div>
+    <hr style="border:none;border-top:1px dashed var(--grey-light);margin:14px 0">
+    <div class="form-group"><label class="form-label">Anthropic API Key — only if using Claude <?= $antKeySet ? '<span class="badge badge-success">set</span>' : '' ?></label>
+      <input type="password" name="anthropic_api_key" class="form-control" placeholder="<?= $antKeySet ? '•••••• (leave blank to keep)' : 'sk-ant-...' ?>" autocomplete="off"></div>
+    <div class="form-group"><label class="form-label">Claude Model</label>
       <select name="marketing_ai_model" class="form-control" style="max-width:280px">
-        <?php $cm = get_setting('marketing_ai_model','claude-opus-4-8'); foreach (['claude-opus-4-8'=>'Claude Opus 4.8 (best)','claude-sonnet-4-6'=>'Claude Sonnet 4.6 (balanced)','claude-haiku-4-5'=>'Claude Haiku 4.5 (cheapest)'] as $mid=>$ml): ?>
+        <?php $cm = get_setting('marketing_ai_model','claude-opus-4-8'); foreach (['claude-opus-4-8'=>'Claude Opus 4.8','claude-sonnet-4-6'=>'Claude Sonnet 4.6','claude-haiku-4-5'=>'Claude Haiku 4.5'] as $mid=>$ml): ?>
         <option value="<?= $mid ?>" <?= $cm===$mid?'selected':'' ?>><?= h($ml) ?></option>
         <?php endforeach; ?>
       </select></div>
