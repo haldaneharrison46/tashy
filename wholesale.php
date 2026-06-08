@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = 'Wholesale B2B | ' . SITE_NAME;
-$metaDesc  = 'Partner with Tashy Kollections — wholesale beauty supplies for salons, spas, and resellers across Jamaica. Trade pricing, authentic stock, reliable supply.';
+$metaDesc  = 'Partner with Tashy Kollections — wholesale home décor, bedding & fragrances for hotels, resorts, villas, gift shops, and resellers across Jamaica. Trade pricing, reliable supply.';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -41,7 +41,7 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <span class="wholesale-nav-badge" style="margin-bottom:16px;display:inline-block">PRO</span>
     <h1>Grow your business with <span>Tashy Kollections</span></h1>
-    <p>Authentic, in-demand beauty products at trade pricing — for salons, spas, barbershops, and resellers across Jamaica.</p>
+    <p>Quality home décor, bedding &amp; fragrances at trade pricing — for hotels, resorts, villas, gift shops, and resellers across Jamaica.</p>
     <div class="stat-row">
       <div class="stat-item"><strong>500+</strong><span>Products in Stock</span></div>
       <div class="stat-item"><strong>14</strong><span>Parishes Delivered</span></div>
@@ -161,7 +161,7 @@ require_once __DIR__ . '/includes/header.php';
             <label class="form-label">Business Type</label>
             <select name="type" class="form-control">
               <?php
-                $types = ['Salon', 'Spa', 'Barbershop', 'Beauty Retailer', 'Online Reseller', 'Other'];
+                $types = ['Hotel / Resort', 'Villa / Airbnb Host', 'Gift Shop', 'Home Décor Retailer', 'Online Reseller', 'Other'];
                 $sel = $_POST['type'] ?? '';
                 foreach ($types as $t):
               ?>

@@ -55,7 +55,7 @@ require_once __DIR__ . '/includes/header.php';
           original packaging.
         </p>
         <p>
-          For hygiene and safety reasons, opened skincare, makeup, and personal-care items cannot be returned
+          For hygiene and safety reasons, opened bedding, bath linens, and personal-care items cannot be returned
           unless they arrived damaged or defective. If you receive a damaged or incorrect item, contact us within
           48 hours of delivery and we'll make it right — at no cost to you.
         </p>

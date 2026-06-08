@@ -52,7 +52,7 @@
 
       <div class="footer-col footer-newsletter">
         <h4>Stay in the loop</h4>
-        <p>New drops, exclusive deals, and beauty tips — straight to your inbox.</p>
+        <p>New drops, exclusive deals, and home styling tips — straight to your inbox.</p>
         <form class="newsletter-form" onsubmit="newsletterSignup(event)">
           <input type="email" placeholder="Your email address" required class="newsletter-input">
           <button type="submit" class="btn btn-primary btn-sm">Subscribe</button>
