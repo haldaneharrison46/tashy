@@ -20,6 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
     $chargeGct   = !empty($_POST['charge_gct']);
     $discount    = max(0, (float)($_POST['discount'] ?? 0));
     $tendered    = max(0, (float)($_POST['amount_paid'] ?? 0));
+    $fulfil      = ($_POST['fulfillment'] ?? 'pickup') === 'delivery' ? 'delivery' : 'pickup';
+    $shipAddr    = trim($_POST['ship_address'] ?? '');
+    $shipCity    = trim($_POST['ship_city'] ?? '');
+    $shipParish  = trim($_POST['ship_parish'] ?? '');
+    $shipZoneId  = (int)($_POST['ship_zone'] ?? 0);
 
     $err = '';
     if (empty($lines)) $err = 'Add at least one item to the sale.';
@@ -46,7 +51,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
             $discount = min($discount, $subtotal);
             $taxable  = $subtotal - $discount;
             $tax      = $chargeGct ? round($taxable * $TAX, 2) : 0.0;
-            $total    = $taxable + $tax;
+            $shipping = 0.0;
+            if ($fulfil === 'delivery') {
+                if ($shipZoneId) {
+                    $z = $pdo->prepare("SELECT rate FROM shipping_zones WHERE id = ?");
+                    $z->execute([$shipZoneId]); $zr = $z->fetchColumn();
+                    $shipping = $zr !== false ? (float)$zr : (function_exists('shipping_for_parish') ? shipping_for_parish($shipParish, $subtotal) : 0.0);
+                } elseif (function_exists('shipping_for_parish')) {
+                    $shipping = shipping_for_parish($shipParish, $subtotal);
+                }
+            }
+            $total    = $taxable + $tax + $shipping;
             if ($payMethod === 'cash' && $tendered > 0 && $tendered < $total) {
                 $err = 'Cash tendered (J$' . number_format($tendered, 2) . ') is less than the total.';
             }
@@ -56,18 +71,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
                 try {
                     $orderNum = generate_order_number();
                     $paid = ($payMethod === 'cash' && $tendered > 0) ? $tendered : $total;
+                    $status = $fulfil === 'delivery' ? 'processing' : 'delivered';
                     $st = $pdo->prepare('INSERT INTO orders
                         (user_id, order_number, status, subtotal, shipping, tax, discount, total, amount_paid,
-                         currency, payment_method, channel, ship_name, ship_email, ship_phone, ship_country, notes)
-                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+                         currency, payment_method, channel, ship_name, ship_email, ship_phone,
+                         ship_address, ship_city, ship_parish, ship_country, notes)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
                     $st->execute([
-                        $custId, $orderNum, 'delivered',
-                        $subtotal, 0.00, $tax, $discount, $total, $paid,
+                        $custId, $orderNum, $status,
+                        $subtotal, $shipping, $tax, $discount, $total, $paid,
                         defined('CURRENCY') ? CURRENCY : 'JMD', $payMethod, 'pos',
-                        $custName, $custEmail, $custPhone, 'Jamaica',
-                        'In-store POS sale by ' . current_user()['name'],
+                        $custName, $custEmail, $custPhone,
+                        $shipAddr ?: null, $shipCity ?: null, $shipParish ?: null, 'Jamaica',
+                        ($fulfil === 'delivery' ? 'POS delivery sale' : 'In-store POS sale') . ' by ' . current_user()['name'],
                     ]);
                     $orderId = (int)$pdo->lastInsertId();
+                    $pdo->prepare('INSERT INTO order_status_history (order_id, status, note, created_by) VALUES (?,?,?,?)')
+                        ->execute([$orderId, $status, 'POS sale', current_user()['name']]);
 
                     $ins = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, brand, price, quantity) VALUES (?,?,?,?,?,?)');
                     foreach ($resolved as $r) {
@@ -87,6 +107,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
     }
     if ($err) flash('error', $err);
     // fall through to render (error shown)
+}
+
+/* ── Email the invoice to the customer ───────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email_invoice'])) {
+    csrf_check();
+    $oid = (int)$_POST['order_id'];
+    $st = $pdo->prepare('SELECT * FROM orders WHERE id = ?'); $st->execute([$oid]); $o = $st->fetch();
+    if ($o && !empty($o['ship_email']) && filter_var($o['ship_email'], FILTER_VALIDATE_EMAIL)) {
+        $it = $pdo->prepare('SELECT * FROM order_items WHERE order_id = ?'); $it->execute([$oid]); $oi = $it->fetchAll();
+        require_once dirname(__DIR__) . '/includes/mail.php';
+        $sent = tk_mail($o['ship_email'], 'Your ' . SITE_NAME . ' invoice ' . $o['order_number'],
+            '<p>Hi ' . h($o['ship_name']) . ', here is your invoice.</p>' . tk_order_summary($o, $oi));
+        flash($sent ? 'success' : 'error', $sent ? 'Invoice emailed to ' . $o['ship_email'] : 'Could not send the email.');
+    } else {
+        flash('error', 'No valid customer email on this sale — add one in Orders, or use WhatsApp/Print.');
+    }
+    redirect(SITE_URL . '/admin/pos.php?receipt=' . $oid);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -109,10 +146,27 @@ if ($rid = (int)($_GET['receipt'] ?? 0)) {
         .receipt .r-row { display:flex; justify-content:space-between; margin:3px 0; }
         .receipt .r-line { border-top:1px dashed #ccc; margin:10px 0; }
         </style>
-        <div class="no-print" style="display:flex;gap:10px;margin-bottom:18px">
+        <?php
+        $phone = preg_replace('/[^0-9]/', '', $o['ship_phone'] ?? '');
+        if ($phone !== '' && strlen($phone) <= 10) $phone = '1' . $phone;
+        $sendMsg = rawurlencode('Hi ' . $o['ship_name'] . ', here is your ' . SITE_NAME . ' receipt ' . $o['order_number']
+                 . ' — Total J$' . number_format($o['total'], 2) . '. Track it: ' . SITE_URL . '/track.php?order=' . $o['order_number']);
+        $waLink  = $phone ? "https://wa.me/{$phone}?text={$sendMsg}" : '';
+        $smsLink = $phone ? "sms:+{$phone}?body={$sendMsg}" : '';
+        $okm = flash('success'); $errm = flash('error');
+        ?>
+        <?php if ($okm): ?><div class="no-print" style="background:#d1fae5;color:#065f46;padding:10px 14px;border-radius:8px;margin-bottom:12px"><?= h($okm) ?></div><?php endif; ?>
+        <?php if ($errm): ?><div class="no-print badge-danger" style="padding:10px 14px;border-radius:8px;margin-bottom:12px;display:block"><?= h($errm) ?></div><?php endif; ?>
+        <div class="no-print" style="display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap">
           <a href="pos.php" class="btn btn-primary btn-sm">+ New Sale</a>
-          <button onclick="window.print()" class="btn btn-outline btn-sm">🖨 Print Receipt</button>
-          <a href="orders.php?id=<?= (int)$o['id'] ?>" class="btn btn-outline btn-sm">View in Orders</a>
+          <button onclick="window.print()" class="btn btn-outline btn-sm">🖨 Print</button>
+          <a href="slip.php?id=<?= (int)$o['id'] ?>&type=invoice" target="_blank" class="btn btn-outline btn-sm">🧾 Invoice</a>
+          <a href="slip.php?id=<?= (int)$o['id'] ?>&type=pick" target="_blank" class="btn btn-outline btn-sm">📋 Pick</a>
+          <a href="slip.php?id=<?= (int)$o['id'] ?>&type=packing" target="_blank" class="btn btn-outline btn-sm">📦 Packing</a>
+          <form method="post" style="display:inline"><?= csrf_field() ?><input type="hidden" name="email_invoice" value="1"><input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>"><button class="btn btn-outline btn-sm" type="submit">✉ Email</button></form>
+          <?php if ($waLink): ?><a href="<?= h($waLink) ?>" target="_blank" rel="noopener" class="btn btn-outline btn-sm">WhatsApp</a><?php endif; ?>
+          <?php if ($smsLink): ?><a href="<?= h($smsLink) ?>" class="btn btn-outline btn-sm">SMS</a><?php endif; ?>
+          <a href="orders.php?id=<?= (int)$o['id'] ?>" class="btn btn-outline btn-sm">Order</a>
         </div>
         <div class="receipt">
           <h2><?= SITE_NAME ?></h2>
@@ -129,6 +183,7 @@ if ($rid = (int)($_GET['receipt'] ?? 0)) {
           <div class="r-line"></div>
           <div class="r-row"><span>Subtotal</span><span>J$<?= number_format($o['subtotal'], 2) ?></span></div>
           <?php if ($o['discount'] > 0): ?><div class="r-row"><span>Discount</span><span>−J$<?= number_format($o['discount'], 2) ?></span></div><?php endif; ?>
+          <?php if (($o['shipping'] ?? 0) > 0): ?><div class="r-row"><span>Shipping</span><span>J$<?= number_format($o['shipping'], 2) ?></span></div><?php endif; ?>
           <?php if ($o['tax'] > 0): ?><div class="r-row"><span>GCT (15%)</span><span>J$<?= number_format($o['tax'], 2) ?></span></div><?php endif; ?>
           <div class="r-row" style="font-weight:700;font-size:1rem"><span>TOTAL</span><span>J$<?= number_format($o['total'], 2) ?></span></div>
           <div class="r-line"></div>
@@ -149,6 +204,8 @@ if ($rid = (int)($_GET['receipt'] ?? 0)) {
 $products = $pdo->query("SELECT id, name, brand, sku, price, stock, image FROM products
                          WHERE active = 1 ORDER BY name")->fetchAll();
 $customers = $pdo->query("SELECT id, name, email, phone FROM users WHERE role = 'customer' AND active = 1 ORDER BY name")->fetchAll();
+$zones     = function_exists('get_shipping_zones') ? get_shipping_zones(true) : [];
+$parishes  = function_exists('jamaica_parishes') ? jamaica_parishes() : [];
 
 $jsProducts = array_map(fn($p) => [
     'id' => (int)$p['id'], 'name' => $p['name'], 'sku' => $p['sku'] ?? '',
@@ -203,11 +260,36 @@ $err = flash('error');
       <option value="<?= $c['id'] ?>"><?= h($c['name']) ?><?= $c['phone'] ? ' · '.h($c['phone']) : '' ?></option>
       <?php endforeach; ?>
     </select>
+    <input type="text" class="form-control pos-field" id="posCustName" placeholder="Customer name (optional)">
+    <div style="display:flex;gap:6px">
+      <input type="text" class="form-control pos-field" id="posCustPhone" placeholder="Phone">
+      <input type="email" class="form-control pos-field" id="posCustEmail" placeholder="Email">
+    </div>
+
+    <div style="display:flex;gap:6px;margin:8px 0">
+      <label style="flex:1;text-align:center;border:1px solid var(--grey-light);border-radius:6px;padding:7px;cursor:pointer;font-size:0.82rem"><input type="radio" name="fulfil" value="pickup" checked> 🏬 Pickup</label>
+      <label style="flex:1;text-align:center;border:1px solid var(--grey-light);border-radius:6px;padding:7px;cursor:pointer;font-size:0.82rem"><input type="radio" name="fulfil" value="delivery"> 🚚 Delivery</label>
+    </div>
+    <div id="posDelivery" style="display:none">
+      <input type="text" class="form-control pos-field" id="posAddr" placeholder="Delivery address">
+      <div style="display:flex;gap:6px">
+        <input type="text" class="form-control pos-field" id="posCity" placeholder="City / town">
+        <select class="form-control pos-field" id="posParish">
+          <option value="">Parish</option>
+          <?php foreach ($parishes as $pp): ?><option value="<?= h($pp) ?>"><?= h($pp) ?></option><?php endforeach; ?>
+        </select>
+      </div>
+      <select class="form-control pos-field" id="posZone">
+        <option value="0" data-rate="0">Shipping method…</option>
+        <?php foreach ($zones as $z): ?><option value="<?= (int)$z['id'] ?>" data-rate="<?= h($z['rate']) ?>"><?= h($z['name']) ?> — J$<?= number_format($z['rate'],0) ?></option><?php endforeach; ?>
+      </select>
+    </div>
 
     <div id="tkItems"><div class="tk-empty">No items yet — tap a product to add it.</div></div>
 
     <div style="margin-top:12px">
       <div class="tk-row"><span>Subtotal</span><span id="tkSubtotal">J$0.00</span></div>
+      <div class="tk-row" id="tkShipRow" style="display:none"><span>Shipping</span><span id="tkShip">J$0.00</span></div>
       <div class="tk-row" style="align-items:center">
         <span>Discount</span>
         <span style="display:flex;gap:4px">
@@ -252,6 +334,11 @@ $err = flash('error');
       <input type="hidden" name="charge_gct" id="fGct">
       <input type="hidden" name="discount" id="fDiscount">
       <input type="hidden" name="amount_paid" id="fTendered">
+      <input type="hidden" name="fulfillment" id="fFulfil">
+      <input type="hidden" name="ship_address" id="fAddr">
+      <input type="hidden" name="ship_city" id="fCity">
+      <input type="hidden" name="ship_parish" id="fParish">
+      <input type="hidden" name="ship_zone" id="fZone">
       <button type="submit" class="btn btn-primary" id="btnComplete" style="width:100%;margin-top:14px;padding:14px;font-size:1rem" disabled>Complete Sale</button>
     </form>
     <button type="button" class="btn btn-outline btn-sm" id="btnClear" style="width:100%;margin-top:8px">Clear Sale</button>
@@ -308,6 +395,11 @@ function renderTicket() {
   }
   recalc();
 }
+function posShipping() {
+  if (document.querySelector('input[name="fulfil"]:checked').value !== 'delivery') return 0;
+  const z = document.getElementById('posZone'); const opt = z.options[z.selectedIndex];
+  return opt ? (parseFloat(opt.dataset.rate) || 0) : 0;
+}
 function recalc() {
   const subtotal = cart.reduce((s,c) => s + c.price*c.qty, 0);
   const dv = parseFloat(document.getElementById('posDiscount').value) || 0;
@@ -317,16 +409,20 @@ function recalc() {
   const discRow = document.getElementById('tkDiscRow');
   if (discount > 0) { discRow.style.display = ''; document.getElementById('tkDisc').textContent = '−' + money(discount); }
   else discRow.style.display = 'none';
+  const ship = posShipping();
+  const shipRow = document.getElementById('tkShipRow');
+  if (ship > 0) { shipRow.style.display = ''; document.getElementById('tkShip').textContent = money(ship); }
+  else shipRow.style.display = 'none';
   const gct = document.getElementById('posGct').checked;
   const tax = gct ? (subtotal - discount) * TAX_RATE : 0;
-  const total = subtotal - discount + tax;
+  const total = subtotal - discount + tax + ship;
   document.getElementById('tkSubtotal').textContent = money(subtotal);
   document.getElementById('tkTax').textContent = money(tax);
   document.getElementById('tkTotal').textContent = money(total);
   const tendered = parseFloat(document.getElementById('posTendered').value) || 0;
   document.getElementById('tkChange').textContent = money(Math.max(0, tendered - total));
   document.getElementById('btnComplete').disabled = cart.length === 0;
-  return {subtotal, discount, tax, total, tendered};
+  return {subtotal, discount, tax, ship, total, tendered};
 }
 // Search filter + barcode-scanner: scan a SKU then Enter to add the matching product.
 const posSearch = document.getElementById('posSearch');
@@ -346,6 +442,13 @@ posSearch.addEventListener('keydown', e => {
 });
 document.getElementById('posDiscType').addEventListener('change', recalc);
 ['posDiscount','posGct','posTendered'].forEach(id => document.getElementById(id).addEventListener('input', recalc));
+function syncFulfil(){ document.getElementById('posDelivery').style.display = document.querySelector('input[name="fulfil"]:checked').value === 'delivery' ? '' : 'none'; recalc(); }
+document.querySelectorAll('input[name="fulfil"]').forEach(r => r.addEventListener('change', syncFulfil));
+document.getElementById('posZone').addEventListener('change', recalc);
+document.getElementById('posCustomer').addEventListener('change', function(){
+  const c = CUSTOMERS.find(x => x.id == this.value);
+  if (c) { document.getElementById('posCustName').value = c.name || ''; document.getElementById('posCustPhone').value = c.phone || ''; document.getElementById('posCustEmail').value = c.email || ''; }
+});
 document.getElementById('posPayment').addEventListener('change', e => {
   document.getElementById('cashRow').style.display = e.target.value === 'cash' ? '' : 'none';
 });
@@ -359,15 +462,24 @@ document.getElementById('saleForm').addEventListener('submit', e => {
     if (!confirm('Cash tendered is less than the total. Continue anyway?')) { e.preventDefault(); return; }
   }
   const cust = CUSTOMERS.find(c => c.id == document.getElementById('posCustomer').value);
+  const typedName  = document.getElementById('posCustName').value.trim();
+  const typedPhone = document.getElementById('posCustPhone').value.trim();
+  const typedEmail = document.getElementById('posCustEmail').value.trim();
+  const fulfil = document.querySelector('input[name="fulfil"]:checked').value;
   document.getElementById('cartJson').value = JSON.stringify(cart.map(c => ({id:c.id, qty:c.qty})));
   document.getElementById('fCustId').value = cust ? cust.id : 0;
-  document.getElementById('fCustName').value = cust ? cust.name : 'Walk-in Customer';
-  document.getElementById('fCustEmail').value = cust ? cust.email : '';
-  document.getElementById('fCustPhone').value = cust ? cust.phone : '';
+  document.getElementById('fCustName').value = typedName || (cust ? cust.name : 'Walk-in Customer');
+  document.getElementById('fCustEmail').value = typedEmail || (cust ? cust.email : '');
+  document.getElementById('fCustPhone').value = typedPhone || (cust ? cust.phone : '');
   document.getElementById('fPayment').value = pay;
   document.getElementById('fGct').value = document.getElementById('posGct').checked ? '1' : '';
   document.getElementById('fDiscount').value = t.discount;
   document.getElementById('fTendered').value = t.tendered;
+  document.getElementById('fFulfil').value = fulfil;
+  document.getElementById('fAddr').value = document.getElementById('posAddr').value.trim();
+  document.getElementById('fCity').value = document.getElementById('posCity').value.trim();
+  document.getElementById('fParish').value = document.getElementById('posParish').value;
+  document.getElementById('fZone').value = document.getElementById('posZone').value;
   document.getElementById('btnComplete').disabled = true;
   document.getElementById('btnComplete').textContent = 'Processing…';
 });

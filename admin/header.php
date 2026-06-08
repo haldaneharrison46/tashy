@@ -92,10 +92,12 @@ body { display:flex; min-height:100vh; flex-direction:column; }
       <div class="section-label">Main</div>
       <a href="index.php"    class="<?= $currentPage==='index.php'    ? 'active':'' ?>"><span class="icon">📊</span> Dashboard</a>
       <a href="pos.php"      class="<?= $currentPage==='pos.php'      ? 'active':'' ?>"><span class="icon">🧾</span> Point of Sale</a>
+      <a href="pos_report.php" class="<?= $currentPage==='pos_report.php' ? 'active':'' ?>"><span class="icon">📈</span> POS Report</a>
       <a href="products.php" class="<?= $currentPage==='products.php' ? 'active':'' ?>"><span class="icon">🛍️</span> Products</a>
       <a href="orders.php"   class="<?= $currentPage==='orders.php'   ? 'active':'' ?>"><span class="icon">📦</span> Orders</a>
       <a href="kanban.php"   class="<?= $currentPage==='kanban.php'   ? 'active':'' ?>"><span class="icon">🗂️</span> Order Board</a>
       <a href="customers.php" class="<?= $currentPage==='customers.php' ? 'active':'' ?>"><span class="icon">🧑</span> Customers</a>
+      <a href="returns.php"  class="<?= $currentPage==='returns.php'  ? 'active':'' ?>"><span class="icon">↩️</span> Returns</a>
       <a href="marketing.php" class="<?= $currentPage==='marketing.php' ? 'active':'' ?>"><span class="icon">📣</span> Marketing</a>
       <div class="section-label">Configuration</div>
       <a href="shipping.php" class="<?= $currentPage==='shipping.php' ? 'active':'' ?>"><span class="icon">🚚</span> Shipping</a>

@@ -234,6 +234,32 @@ CREATE TABLE IF NOT EXISTS order_status_history (
   FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Returns / RMA ────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS returns (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_id      INT UNSIGNED DEFAULT NULL,
+  rma_number    VARCHAR(40)  NOT NULL UNIQUE,
+  status        ENUM('requested','approved','received','refunded','rejected') NOT NULL DEFAULT 'requested',
+  reason        TEXT         DEFAULT NULL,
+  refund_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+  restocked     TINYINT(1)   NOT NULL DEFAULT 0,
+  created_by    VARCHAR(100) DEFAULT NULL,
+  created_at    TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_order (order_id),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS return_items (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  return_id  INT UNSIGNED NOT NULL,
+  product_id INT UNSIGNED DEFAULT NULL,
+  name       VARCHAR(200) NOT NULL,
+  price      DECIMAL(10,2) NOT NULL DEFAULT 0,
+  quantity   INT          NOT NULL DEFAULT 1,
+  INDEX idx_return (return_id),
+  FOREIGN KEY (return_id) REFERENCES returns(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
