@@ -23,7 +23,16 @@ CREATE TABLE IF NOT EXISTS users (
   phone         VARCHAR(30)      DEFAULT NULL,
   role          ENUM('customer','admin') NOT NULL DEFAULT 'customer',
   active        TINYINT(1)       NOT NULL DEFAULT 1,
+  admin_pin_hash VARCHAR(255)    DEFAULT NULL,  -- optional quick-login PIN (staff)
   created_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── PIN login throttle (brute-force protection) ──────────────
+CREATE TABLE IF NOT EXISTS pin_attempts (
+  ip            VARCHAR(45)      PRIMARY KEY,
+  attempts      INT              NOT NULL DEFAULT 0,
+  locked_until  DATETIME         DEFAULT NULL,
+  updated_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Categories ───────────────────────────────────────────────
