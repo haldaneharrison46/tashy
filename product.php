@@ -12,6 +12,32 @@ if (!$product) {
     exit;
 }
 
+require_once __DIR__ . '/includes/auth.php';
+
+// ── Review submission ─────────────────────────────────────────
+$reviewError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submit'])) {
+    csrf_check();
+    if (!is_logged_in()) {
+        $reviewError = 'Please sign in to leave a review.';
+    } else {
+        $rating = (int)($_POST['rating'] ?? 0);
+        $body   = trim($_POST['body'] ?? '');
+        if ($rating < 1 || $rating > 5)      $reviewError = 'Please choose a star rating.';
+        elseif (mb_strlen($body) < 3)        $reviewError = 'Please write a short review.';
+        else {
+            db()->prepare(
+                'INSERT INTO reviews (product_id, user_id, rating, body) VALUES (?,?,?,?)
+                 ON DUPLICATE KEY UPDATE rating = VALUES(rating), body = VALUES(body), created_at = CURRENT_TIMESTAMP'
+            )->execute([(int)$product['id'], current_user()['id'], $rating, $body]);
+            flash('success', 'Thanks for your review!');
+            redirect(SITE_URL . '/product.php?slug=' . $product['slug'] . '#reviews');
+        }
+    }
+}
+$prodRating  = get_product_rating((int)$product['id']);
+$prodReviews = get_product_reviews((int)$product['id']);
+
 $pageTitle = h($product['name']) . ' | ' . SITE_NAME;
 $metaDesc  = $product['description'] ? mb_substr(strip_tags($product['description']), 0, 160) : '';
 $ogImage   = SITE_URL . '/assets/images/' . ($product['image'] ?: 'placeholder.svg');
@@ -61,6 +87,11 @@ require_once __DIR__ . '/includes/header.php';
     <div class="pdp-info">
       <?php if ($product['brand']): ?><div class="product-brand" style="margin-bottom:6px"><?= h($product['brand']) ?></div><?php endif; ?>
       <h1 class="pdp-title"><?= h($product['name']) ?></h1>
+      <?php if ($prodRating['count'] > 0): ?>
+      <div style="margin:6px 0 2px"><?= stars_html($prodRating['avg']) ?>
+        <a href="#reviews" style="color:#999;font-size:.85rem;text-decoration:none"><?= $prodRating['avg'] ?> (<?= $prodRating['count'] ?> review<?= $prodRating['count']==1?'':'s' ?>)</a>
+      </div>
+      <?php endif; ?>
 
       <div class="pdp-price-row">
         <span class="pdp-price"><?= money($product['price']) ?></span>
@@ -109,6 +140,51 @@ require_once __DIR__ . '/includes/header.php';
     </div><!-- /.pdp-info -->
   </div>
 </div>
+
+<!-- Customer Reviews -->
+<section class="section" id="reviews">
+  <div class="container" style="max-width:760px">
+    <h2 class="section-title">Customer Reviews</h2>
+    <?php if ($prodRating['count'] > 0): ?>
+      <p style="font-size:1.1rem;margin-bottom:18px"><?= stars_html($prodRating['avg']) ?> <strong><?= $prodRating['avg'] ?></strong> / 5 &middot; <?= $prodRating['count'] ?> review<?= $prodRating['count']==1?'':'s' ?></p>
+    <?php else: ?>
+      <p style="color:#999;margin-bottom:18px">No reviews yet — be the first to review this product!</p>
+    <?php endif; ?>
+
+    <?php foreach ($prodReviews as $rv): ?>
+    <div style="border-top:1px solid var(--grey-light);padding:14px 0">
+      <div><?= stars_html((float)$rv['rating']) ?> <strong style="margin-left:6px"><?= h($rv['name']) ?></strong>
+        <span style="color:#aaa;font-size:.8rem;margin-left:6px"><?= date('d M Y', strtotime($rv['created_at'])) ?></span></div>
+      <p style="margin-top:6px;color:#444"><?= nl2br(h($rv['body'])) ?></p>
+    </div>
+    <?php endforeach; ?>
+
+    <div style="margin-top:24px">
+      <?php if ($reviewError): ?>
+      <div class="form-error" style="background:#fef2f2;border:1px solid #fca5a5;color:#c0392b;padding:10px 14px;border-radius:8px;margin-bottom:14px"><?= h($reviewError) ?></div>
+      <?php endif; ?>
+      <?php if (is_logged_in()): ?>
+      <h3 style="margin-bottom:10px">Write a review</h3>
+      <form method="post" action="#reviews">
+        <?= csrf_field() ?>
+        <input type="hidden" name="review_submit" value="1">
+        <select name="rating" required class="form-control" style="max-width:180px;margin-bottom:10px">
+          <option value="">Choose rating…</option>
+          <option value="5">★★★★★ (5)</option>
+          <option value="4">★★★★ (4)</option>
+          <option value="3">★★★ (3)</option>
+          <option value="2">★★ (2)</option>
+          <option value="1">★ (1)</option>
+        </select>
+        <textarea name="body" class="form-control" rows="3" placeholder="Share your thoughts about this product…" required style="width:100%;margin-bottom:10px"></textarea>
+        <button type="submit" class="btn btn-primary">Submit Review</button>
+      </form>
+      <?php else: ?>
+      <p style="color:#777"><a href="<?= SITE_URL ?>/login.php?next=<?= urlencode('/product.php?slug='.$product['slug']) ?>" style="color:var(--rose-gold)">Sign in</a> to write a review.</p>
+      <?php endif; ?>
+    </div>
+  </div>
+</section>
 
 <!-- Related Products -->
 <?php if (!empty($related)): ?>

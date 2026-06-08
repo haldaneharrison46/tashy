@@ -27,6 +27,19 @@ CREATE TABLE IF NOT EXISTS users (
   created_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Product reviews ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS reviews (
+  id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  product_id  INT UNSIGNED  NOT NULL,
+  user_id     INT UNSIGNED  NOT NULL,
+  rating      TINYINT       NOT NULL,
+  body        TEXT          NOT NULL,
+  created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uniq_prod_user (product_id, user_id),
+  FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Newsletter subscribers ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS newsletter_subscribers (
   id            INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,

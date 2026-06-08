@@ -69,6 +69,32 @@ function money(float $amount): string {
     return $cfg['symbol'] . number_format($amount * $cfg['rate'], 2);
 }
 
+// ── Product reviews ───────────────────────────────────────────
+function get_product_rating(int $productId): array {
+    $st = db()->prepare('SELECT COUNT(*) c, AVG(rating) a FROM reviews WHERE product_id = ?');
+    $st->execute([$productId]);
+    $r = $st->fetch();
+    return ['count' => (int)($r['c'] ?? 0), 'avg' => round((float)($r['a'] ?? 0), 1)];
+}
+function get_product_reviews(int $productId): array {
+    $st = db()->prepare(
+        'SELECT r.rating, r.body, r.created_at, u.name
+         FROM reviews r JOIN users u ON u.id = r.user_id
+         WHERE r.product_id = ? ORDER BY r.created_at DESC'
+    );
+    $st->execute([$productId]);
+    return $st->fetchAll();
+}
+function stars_html(float $avg): string {
+    $full = (int)floor($avg);
+    $half = ($avg - $full) >= 0.5;
+    $out = '';
+    for ($i = 1; $i <= 5; $i++) {
+        $out .= '<span style="color:#e0a93b">' . ($i <= $full ? '★' : (($i === $full + 1 && $half) ? '⯨' : '☆')) . '</span>';
+    }
+    return $out;
+}
+
 // ── Slug generator ────────────────────────────────────────────
 function slugify(string $text): string {
     $text = mb_strtolower(trim($text));
