@@ -75,7 +75,7 @@ require_once __DIR__ . '/includes/header.php';
       <div class="value-card">
         <div class="icon">🤝</div>
         <h4>Wholesale Ready</h4>
-        <p>Salons, spas &amp; resellers welcome — partner with us for trade pricing and support.</p>
+        <p>Hotels, resorts, gift shops &amp; resellers welcome — partner with us for trade pricing and support.</p>
       </div>
     </div>
   </div>
