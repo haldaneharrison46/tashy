@@ -95,6 +95,7 @@ body { display:flex; min-height:100vh; flex-direction:column; }
       <a href="products.php" class="<?= $currentPage==='products.php' ? 'active':'' ?>"><span class="icon">🛍️</span> Products</a>
       <a href="orders.php"   class="<?= $currentPage==='orders.php'   ? 'active':'' ?>"><span class="icon">📦</span> Orders</a>
       <a href="customers.php" class="<?= $currentPage==='customers.php' ? 'active':'' ?>"><span class="icon">🧑</span> Customers</a>
+      <a href="marketing.php" class="<?= $currentPage==='marketing.php' ? 'active':'' ?>"><span class="icon">📣</span> Marketing</a>
       <div class="section-label">Configuration</div>
       <a href="shipping.php" class="<?= $currentPage==='shipping.php' ? 'active':'' ?>"><span class="icon">🚚</span> Shipping</a>
       <a href="users.php"    class="<?= $currentPage==='users.php'    ? 'active':'' ?>"><span class="icon">👥</span> Staff &amp; Users</a>

@@ -188,6 +188,26 @@ CREATE TABLE IF NOT EXISTS shipping_zones (
   created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Marketing Posts ──────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS marketing_posts (
+  id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  title        VARCHAR(200)  DEFAULT NULL,
+  body         TEXT          NOT NULL,
+  hashtags     VARCHAR(500)  DEFAULT NULL,
+  image        VARCHAR(255)  DEFAULT NULL,
+  link_url     VARCHAR(500)  DEFAULT NULL,
+  platforms    VARCHAR(200)  DEFAULT NULL,        -- comma: facebook,instagram,twitter,whatsapp,webhook
+  product_id   INT UNSIGNED  DEFAULT NULL,
+  status       ENUM('draft','scheduled','published','failed') NOT NULL DEFAULT 'draft',
+  scheduled_at DATETIME      DEFAULT NULL,
+  published_at DATETIME      DEFAULT NULL,
+  result       TEXT          DEFAULT NULL,
+  created_by   INT UNSIGNED  DEFAULT NULL,
+  created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_status (status),
+  INDEX idx_sched (scheduled_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
@@ -197,7 +217,8 @@ SET FOREIGN_KEY_CHECKS = 1;
 -- Settings
 INSERT IGNORE INTO settings (skey, sval) VALUES
   ('default_shipping_rate',   '1500'),
-  ('free_shipping_threshold', '5000');
+  ('free_shipping_threshold', '5000'),
+  ('marketing_ai_model',      'claude-opus-4-8');
 
 -- Shipping zones
 INSERT IGNORE INTO shipping_zones (id, name, parishes, rate, free_threshold, active, sort_order) VALUES
