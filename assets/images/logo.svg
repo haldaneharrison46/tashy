@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 96" role="img" aria-label="Tashy Kollections">
+  <!-- Emblem: roundel monogram -->
+  <g>
+    <circle cx="48" cy="48" r="40" fill="#fff8f2"/>
+    <circle cx="48" cy="48" r="37.5" fill="none" stroke="#c9956c" stroke-width="2"/>
+    <circle cx="48" cy="48" r="32.5" fill="none" stroke="#c9956c" stroke-width="1" opacity="0.55"/>
+    <text x="48" y="62" text-anchor="middle" font-family="'Playfair Display', Georgia, 'Times New Roman', serif" font-size="46" font-weight="700" fill="#3a2e28">T</text>
+    <path d="M30 70 q18 7 36 0" fill="none" stroke="#c9956c" stroke-width="1.8" stroke-linecap="round"/>
+    <circle cx="48" cy="20.5" r="2" fill="#c9956c"/>
+  </g>
+  <!-- Wordmark -->
+  <text x="104" y="50" font-family="'Playfair Display', Georgia, 'Times New Roman', serif" font-size="40" font-weight="700" fill="#3a2e28">Tashy</text>
+  <text x="106" y="72" font-family="'Inter', Arial, Helvetica, sans-serif" font-size="13.5" font-weight="600" fill="#c9956c" letter-spacing="0.42em">KOLLECTIONS</text>
+</svg>

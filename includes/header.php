@@ -27,6 +27,8 @@ $_bodyClass = $bodyClass ?? '';
   ?>
   <meta name="description" content="<?= h($_desc) ?>">
   <link rel="canonical" href="<?= h($_canon) ?>">
+  <link rel="icon" type="image/svg+xml" href="<?= SITE_URL ?>/assets/images/favicon.svg">
+  <link rel="apple-touch-icon" href="<?= SITE_URL ?>/assets/images/favicon.svg">
   <!-- Open Graph / Twitter -->
   <meta property="og:site_name" content="<?= h(SITE_NAME) ?>">
   <meta property="og:title" content="<?= h($_pageTitle) ?>">
@@ -54,9 +56,16 @@ $_bodyClass = $bodyClass ?? '';
 
       <!-- Logo -->
       <a href="<?= SITE_URL ?>/index.php" class="header-logo">
-        <svg class="logo-svg" viewBox="0 0 220 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Tashy Kollections">
-          <text x="0" y="32" font-family="'Playfair Display', Georgia, serif" font-size="28" font-weight="700" fill="currentColor">Tashy</text>
-          <text x="0" y="44" font-family="'Inter', Arial, sans-serif" font-size="10" font-weight="600" fill="#c9956c" letter-spacing="0.18em">KOLLECTIONS</text>
+        <svg class="logo-svg" width="250" height="44" viewBox="0 0 250 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Tashy Kollections">
+          <!-- Emblem: roundel monogram -->
+          <circle cx="22" cy="22" r="20" fill="none" stroke="#c9956c" stroke-width="1.4"/>
+          <circle cx="22" cy="22" r="16.4" fill="none" stroke="#c9956c" stroke-width="0.7" opacity="0.55"/>
+          <text x="22" y="30" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="22" font-weight="700" fill="currentColor">T</text>
+          <path d="M13 34 q9 3.6 18 0" fill="none" stroke="#c9956c" stroke-width="1" stroke-linecap="round"/>
+          <circle cx="22" cy="4.6" r="1.1" fill="#c9956c"/>
+          <!-- Wordmark -->
+          <text x="52" y="28" font-family="'Playfair Display', Georgia, serif" font-size="25" font-weight="700" fill="currentColor">Tashy</text>
+          <text x="53" y="40" font-family="'Inter', Arial, sans-serif" font-size="9" font-weight="600" fill="#c9956c" letter-spacing="0.24em">KOLLECTIONS</text>
         </svg>
       </a>
 
@@ -80,7 +89,9 @@ $_bodyClass = $bodyClass ?? '';
               </div>
             </div>
           </li>
+          <!-- Wholesale B2B hidden from menu (2026-06-08) — page still reachable directly at /wholesale.php
           <li class="nav-item"><a href="<?= SITE_URL ?>/wholesale.php" class="nav-link">Wholesale B2B <span class="wholesale-nav-badge">PRO</span></a></li>
+          -->
           <li class="nav-item"><a href="<?= SITE_URL ?>/about.php" class="nav-link">About</a></li>
           <li class="nav-item"><a href="<?= SITE_URL ?>/contact.php" class="nav-link">Contact</a></li>
         </ul>
@@ -209,7 +220,9 @@ $_bodyClass = $bodyClass ?? '';
         <a href="<?= SITE_URL ?>/shop.php?featured=1">Best Sellers</a>
       </div>
     </li>
+    <!-- Wholesale B2B hidden from menu (2026-06-08)
     <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/wholesale.php" class="mobile-nav-link">Wholesale B2B</a></li>
+    -->
     <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/about.php" class="mobile-nav-link">About</a></li>
     <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/contact.php" class="mobile-nav-link">Contact</a></li>
     <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/policy.php" class="mobile-nav-link">Shipping &amp; Returns</a></li>
