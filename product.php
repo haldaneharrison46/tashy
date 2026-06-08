@@ -14,6 +14,8 @@ if (!$product) {
 
 $pageTitle = h($product['name']) . ' | ' . SITE_NAME;
 $metaDesc  = $product['description'] ? mb_substr(strip_tags($product['description']), 0, 160) : '';
+$ogImage   = SITE_URL . '/assets/images/' . ($product['image'] ?: 'placeholder.svg');
+$ogType    = 'product';
 
 // Related products (same category, different product)
 $related = get_products(['category' => $product['category_slug'], 'limit' => 4]);
@@ -21,6 +23,9 @@ $related = array_filter($related, fn($r) => $r['id'] !== $product['id']);
 
 require_once __DIR__ . '/includes/header.php';
 ?>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Product","name":<?= json_encode($product['name']) ?>,"image":<?= json_encode($ogImage) ?>,"description":<?= json_encode($metaDesc) ?>,"brand":{"@type":"Brand","name":<?= json_encode($product['brand'] ?? 'Tashy Kollections') ?>},"sku":<?= json_encode($product['sku'] ?? (string)$product['id']) ?>,"offers":{"@type":"Offer","url":<?= json_encode(SITE_URL.'/product.php?slug='.$product['slug']) ?>,"priceCurrency":"JMD","price":<?= json_encode(number_format((float)$product['price'],2,'.','')) ?>,"availability":"https://schema.org/<?= ((int)$product['stock'] > 0 ? 'InStock' : 'OutOfStock') ?>"}}
+</script>
 
 <div class="container" style="padding-top:32px">
   <!-- Breadcrumb -->

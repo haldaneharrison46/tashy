@@ -22,6 +22,9 @@ DirectoryIndex index.php
   RewriteEngine On
   RewriteBase /
 
+  # XML sitemap served by PHP
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
   # Block direct PHP includes access
   RewriteRule ^includes/       - [F,L]
   RewriteRule ^config/         - [F,L]

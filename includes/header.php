@@ -19,7 +19,28 @@ $_bodyClass = $bodyClass ?? '';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><?= h($_pageTitle) ?></title>
-  <meta name="description" content="<?= h($metaDesc ?? 'Home décor, bedding, mats & fragrances — Tashy Kollections, Falmouth, Jamaica.') ?>">
+  <?php
+    $_desc  = $metaDesc ?? 'Home décor, bedding, mats & fragrances — Tashy Kollections, Falmouth, Jamaica.';
+    $_ogImg = $ogImage ?? (SITE_URL . '/assets/images/hero-home.jpg');
+    $_ogType= $ogType ?? 'website';
+    $_canon = SITE_URL . ($_SERVER['REQUEST_URI'] ?? '/');
+  ?>
+  <meta name="description" content="<?= h($_desc) ?>">
+  <link rel="canonical" href="<?= h($_canon) ?>">
+  <!-- Open Graph / Twitter -->
+  <meta property="og:site_name" content="<?= h(SITE_NAME) ?>">
+  <meta property="og:title" content="<?= h($_pageTitle) ?>">
+  <meta property="og:description" content="<?= h($_desc) ?>">
+  <meta property="og:type" content="<?= h($_ogType) ?>">
+  <meta property="og:url" content="<?= h($_canon) ?>">
+  <meta property="og:image" content="<?= h($_ogImg) ?>">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="<?= h($_pageTitle) ?>">
+  <meta name="twitter:description" content="<?= h($_desc) ?>">
+  <meta name="twitter:image" content="<?= h($_ogImg) ?>">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"Store","name":<?= json_encode(SITE_NAME) ?>,"url":<?= json_encode(SITE_URL) ?>,"image":<?= json_encode($_ogImg) ?>,"email":<?= json_encode(defined('SITE_EMAIL')?SITE_EMAIL:'') ?>,"telephone":"+1-876-487-0686","address":{"@type":"PostalAddress","streetAddress":"37 Cornwall Street","addressLocality":"Falmouth","addressRegion":"Trelawny","addressCountry":"JM"}}
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">

@@ -56,6 +56,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             cart_clear();
             $pdo->commit();
 
+            // Send confirmation (customer) + alert (store). Non-fatal if mail fails.
+            try {
+                require_once __DIR__ . '/includes/mail.php';
+                send_order_emails([
+                    'order_number' => $orderNum,
+                    'subtotal' => $totals['subtotal'], 'shipping' => $totals['shipping'],
+                    'tax' => $totals['tax'], 'total' => $totals['total'],
+                    'ship_name' => $f['name'], 'ship_email' => $f['email'], 'ship_phone' => $f['phone'],
+                    'ship_address' => $f['address'], 'ship_city' => $f['city'], 'ship_parish' => $f['parish'],
+                ], $totals['items']);
+            } catch (Throwable $e) { /* don't block the order on email errors */ }
+
             redirect(SITE_URL . '/order-success.php?order=' . urlencode($orderNum));
         } catch (Exception $e) {
             $pdo->rollBack();
