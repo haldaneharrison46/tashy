@@ -83,6 +83,36 @@ body { display:flex; min-height:100vh; flex-direction:column; }
 .badge-grey    { background:#f3f4f6; color:#6b7280; }
 .admin-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
 .admin-form-grid .full { grid-column:1/-1; }
+
+/* ── Mobile: stack so screens are full-width; sidebar becomes a compact top strip ── */
+@media (max-width: 900px) {
+  .admin-wrap { flex-direction:column; }
+  .admin-content { width:100%; min-width:0; }
+  .admin-sidebar {
+    width:100%; min-height:0; flex-direction:row; align-items:center;
+    overflow-x:auto; -webkit-overflow-scrolling:touch;
+    position:sticky; top:0; z-index:200; padding:0; border-bottom:1px solid #333;
+  }
+  .admin-sidebar::-webkit-scrollbar { height:0; }
+  .admin-sidebar .brand { padding:11px 12px; border:none; font-size:1rem; white-space:nowrap; flex-shrink:0; }
+  .admin-sidebar .brand br, .admin-sidebar .brand span { display:none; }
+  .admin-sidebar nav { display:flex; flex-direction:row; align-items:center; }
+  .admin-sidebar nav .section-label { display:none; }
+  .admin-sidebar nav a { padding:13px 11px; white-space:nowrap; font-size:0.8rem; gap:5px; }
+  .admin-sidebar nav a .icon { width:auto; }
+  .admin-sidebar .sidebar-footer { display:none; }
+  .admin-topbar { position:static; padding:12px 16px; }
+  .admin-topbar h1 { font-size:1rem; }
+  .admin-topbar .tb-date, .admin-topbar .tb-newprod { display:none; }
+  .admin-main { padding:16px; }
+  .admin-form-grid { grid-template-columns:1fr; }
+  /* Collapse the inner two-column page layouts so each screen is full-width */
+  .admin-main [style*="grid-template-columns"],
+  .admin-main .pos-grid { grid-template-columns:1fr !important; }
+}
+@media (max-width: 480px) {
+  .admin-sidebar .brand { display:none; }   /* Dashboard is in the nav strip anyway */
+}
 </style>
 </head>
 <body>
@@ -120,8 +150,9 @@ body { display:flex; min-height:100vh; flex-direction:column; }
     <div class="admin-topbar">
       <h1><?= $pageTitle ?? 'Admin' ?></h1>
       <div class="topbar-right">
-        <span><?= date('l, d M Y') ?></span>
-        <a href="products.php?action=add">+ New Product</a>
+        <span class="tb-date"><?= date('l, d M Y') ?></span>
+        <a href="products.php?action=add" class="tb-newprod">+ New Product</a>
+        <a href="<?= SITE_URL ?>/logout.php" style="color:#e07878">Sign out</a>
       </div>
     </div>
     <div class="admin-main">
