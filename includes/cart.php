@@ -43,7 +43,11 @@ function cart_totals(): array {
     foreach ($items as $item) {
         $subtotal += $item['price'] * $item['quantity'];
     }
-    $shipping = ($subtotal > 0 && $subtotal < FREE_SHIPPING_THRESHOLD) ? 1500.00 : 0.00;
+    // Estimate using the editable default rate/threshold (parish-specific
+    // zone rate is applied at checkout once the parish is known).
+    $thr  = function_exists('free_shipping_threshold') ? free_shipping_threshold() : (float)FREE_SHIPPING_THRESHOLD;
+    $rate = function_exists('shipping_default_rate')   ? shipping_default_rate()   : 1500.00;
+    $shipping = ($subtotal > 0 && $subtotal < $thr) ? $rate : 0.00;
     $tax      = round($subtotal * TAX_RATE, 2);
     $total    = $subtotal + $shipping + $tax;
     return compact('items', 'subtotal', 'shipping', 'tax', 'total');

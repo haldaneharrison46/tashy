@@ -26,6 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($f['parish']))  $errors[] = 'Parish required.';
 
     if (empty($errors)) {
+        // Apply the parish-specific shipping zone rate now that the parish is known.
+        $shipCharge = shipping_for_parish($f['parish'], $totals['subtotal']);
+        $orderTotal = $totals['subtotal'] + $shipCharge + $totals['tax'];
         $pdo = db();
         $pdo->beginTransaction();
         try {
@@ -37,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([
                 $user ? $user['id'] : null,
                 $orderNum,
-                $totals['subtotal'], $totals['shipping'], $totals['tax'], $totals['total'],
+                $totals['subtotal'], $shipCharge, $totals['tax'], $orderTotal,
                 CURRENCY,
                 $f['name'], $f['email'], $f['phone'],
                 $f['address'], $f['city'], $f['parish'], 'Jamaica',
@@ -61,8 +64,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 require_once __DIR__ . '/includes/mail.php';
                 send_order_emails([
                     'order_number' => $orderNum,
-                    'subtotal' => $totals['subtotal'], 'shipping' => $totals['shipping'],
-                    'tax' => $totals['tax'], 'total' => $totals['total'],
+                    'subtotal' => $totals['subtotal'], 'shipping' => $shipCharge,
+                    'tax' => $totals['tax'], 'total' => $orderTotal,
                     'ship_name' => $f['name'], 'ship_email' => $f['email'], 'ship_phone' => $f['phone'],
                     'ship_address' => $f['address'], 'ship_city' => $f['city'], 'ship_parish' => $f['parish'],
                 ], $totals['items']);

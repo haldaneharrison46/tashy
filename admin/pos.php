@@ -1,0 +1,351 @@
+<?php
+$pageTitle = 'Point of Sale';
+require_once __DIR__ . '/header.php';
+
+$pdo = db();
+$TAX = defined('TAX_RATE') ? (float)TAX_RATE : 0.15;
+
+/* ─────────────────────────────────────────────────────────────
+   Complete a sale  →  create order (channel=pos), decrement stock
+   ───────────────────────────────────────────────────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
+    csrf_check();
+
+    $lines       = json_decode($_POST['cart_json'] ?? '[]', true) ?: [];
+    $custId      = (int)($_POST['customer_id'] ?? 0) ?: null;
+    $custName    = trim($_POST['customer_name'] ?? '') ?: 'Walk-in Customer';
+    $custEmail   = trim($_POST['customer_email'] ?? '');
+    $custPhone   = trim($_POST['customer_phone'] ?? '');
+    $payMethod   = in_array($_POST['payment_method'] ?? '', ['cash','card','transfer'], true) ? $_POST['payment_method'] : 'cash';
+    $chargeGct   = !empty($_POST['charge_gct']);
+    $discount    = max(0, (float)($_POST['discount'] ?? 0));
+    $tendered    = max(0, (float)($_POST['amount_paid'] ?? 0));
+
+    $err = '';
+    if (empty($lines)) $err = 'Add at least one item to the sale.';
+
+    if (!$err) {
+        // Re-price from DB (never trust client prices) & validate stock.
+        $resolved = [];
+        $subtotal = 0.0;
+        foreach ($lines as $ln) {
+            $pid = (int)($ln['id'] ?? 0);
+            $qty = max(1, (int)($ln['qty'] ?? 0));
+            if ($pid <= 0) continue;
+            $st = $pdo->prepare('SELECT id, name, brand, price, stock FROM products WHERE id = ? AND active = 1');
+            $st->execute([$pid]);
+            $p = $st->fetch();
+            if (!$p) { $err = 'A product is no longer available — please re-scan.'; break; }
+            if ($qty > (int)$p['stock']) { $err = 'Not enough stock for ' . $p['name'] . ' (have ' . $p['stock'] . ').'; break; }
+            $subtotal += (float)$p['price'] * $qty;
+            $resolved[] = ['p' => $p, 'qty' => $qty];
+        }
+        if (!$err && empty($resolved)) $err = 'Add at least one item to the sale.';
+
+        if (!$err) {
+            $discount = min($discount, $subtotal);
+            $taxable  = $subtotal - $discount;
+            $tax      = $chargeGct ? round($taxable * $TAX, 2) : 0.0;
+            $total    = $taxable + $tax;
+            if ($payMethod === 'cash' && $tendered > 0 && $tendered < $total) {
+                $err = 'Cash tendered (J$' . number_format($tendered, 2) . ') is less than the total.';
+            }
+
+            if (!$err) {
+                $pdo->beginTransaction();
+                try {
+                    $orderNum = generate_order_number();
+                    $paid = ($payMethod === 'cash' && $tendered > 0) ? $tendered : $total;
+                    $st = $pdo->prepare('INSERT INTO orders
+                        (user_id, order_number, status, subtotal, shipping, tax, discount, total, amount_paid,
+                         currency, payment_method, channel, ship_name, ship_email, ship_phone, ship_country, notes)
+                        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+                    $st->execute([
+                        $custId, $orderNum, 'delivered',
+                        $subtotal, 0.00, $tax, $discount, $total, $paid,
+                        defined('CURRENCY') ? CURRENCY : 'JMD', $payMethod, 'pos',
+                        $custName, $custEmail, $custPhone, 'Jamaica',
+                        'In-store POS sale by ' . current_user()['name'],
+                    ]);
+                    $orderId = (int)$pdo->lastInsertId();
+
+                    $ins = $pdo->prepare('INSERT INTO order_items (order_id, product_id, name, brand, price, quantity) VALUES (?,?,?,?,?,?)');
+                    foreach ($resolved as $r) {
+                        $ins->execute([$orderId, $r['p']['id'], $r['p']['name'], $r['p']['brand'], $r['p']['price'], $r['qty']]);
+                        $pdo->prepare('UPDATE products SET stock = GREATEST(0, stock - ?) WHERE id = ?')
+                            ->execute([$r['qty'], $r['p']['id']]);
+                    }
+                    $pdo->commit();
+                    flash('success', 'Sale completed — ' . $orderNum);
+                    redirect(SITE_URL . '/admin/pos.php?receipt=' . $orderId);
+                } catch (Throwable $e) {
+                    $pdo->rollBack();
+                    $err = 'Sale failed: ' . $e->getMessage();
+                }
+            }
+        }
+    }
+    if ($err) flash('error', $err);
+    // fall through to render (error shown)
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Receipt view
+   ───────────────────────────────────────────────────────────── */
+if ($rid = (int)($_GET['receipt'] ?? 0)) {
+    $st = $pdo->prepare('SELECT * FROM orders WHERE id = ?');
+    $st->execute([$rid]);
+    $o = $st->fetch();
+    if ($o) {
+        $items = $pdo->prepare('SELECT * FROM order_items WHERE order_id = ?');
+        $items->execute([$rid]);
+        $items = $items->fetchAll();
+        $change = ($o['amount_paid'] !== null) ? max(0, (float)$o['amount_paid'] - (float)$o['total']) : 0;
+        ?>
+        <style>
+        @media print { .admin-sidebar,.admin-topbar,.no-print{display:none!important} .admin-main{padding:0!important} body{display:block!important} }
+        .receipt { max-width:360px; margin:0 auto; background:#fff; border:1px solid var(--grey-light); border-radius:10px; padding:24px; font-size:0.86rem; }
+        .receipt h2 { text-align:center; font-size:1.1rem; }
+        .receipt .r-row { display:flex; justify-content:space-between; margin:3px 0; }
+        .receipt .r-line { border-top:1px dashed #ccc; margin:10px 0; }
+        </style>
+        <div class="no-print" style="display:flex;gap:10px;margin-bottom:18px">
+          <a href="pos.php" class="btn btn-primary btn-sm">+ New Sale</a>
+          <button onclick="window.print()" class="btn btn-outline btn-sm">🖨 Print Receipt</button>
+          <a href="orders.php?id=<?= (int)$o['id'] ?>" class="btn btn-outline btn-sm">View in Orders</a>
+        </div>
+        <div class="receipt">
+          <h2><?= SITE_NAME ?></h2>
+          <p style="text-align:center;color:#888;font-size:0.78rem"><?= h(SITE_ADDRESS) ?></p>
+          <div class="r-line"></div>
+          <div class="r-row"><span>Receipt</span><strong><?= h($o['order_number']) ?></strong></div>
+          <div class="r-row"><span>Date</span><span><?= date('d M Y, g:ia', strtotime($o['created_at'])) ?></span></div>
+          <div class="r-row"><span>Cashier</span><span><?= h(current_user()['name']) ?></span></div>
+          <div class="r-row"><span>Customer</span><span><?= h($o['ship_name']) ?></span></div>
+          <div class="r-line"></div>
+          <?php foreach ($items as $it): ?>
+          <div class="r-row"><span><?= h($it['name']) ?> ×<?= $it['quantity'] ?></span><span>J$<?= number_format($it['price'] * $it['quantity'], 2) ?></span></div>
+          <?php endforeach; ?>
+          <div class="r-line"></div>
+          <div class="r-row"><span>Subtotal</span><span>J$<?= number_format($o['subtotal'], 2) ?></span></div>
+          <?php if ($o['discount'] > 0): ?><div class="r-row"><span>Discount</span><span>−J$<?= number_format($o['discount'], 2) ?></span></div><?php endif; ?>
+          <?php if ($o['tax'] > 0): ?><div class="r-row"><span>GCT (15%)</span><span>J$<?= number_format($o['tax'], 2) ?></span></div><?php endif; ?>
+          <div class="r-row" style="font-weight:700;font-size:1rem"><span>TOTAL</span><span>J$<?= number_format($o['total'], 2) ?></span></div>
+          <div class="r-line"></div>
+          <div class="r-row"><span>Paid (<?= ucfirst($o['payment_method']) ?>)</span><span>J$<?= number_format($o['amount_paid'] ?? $o['total'], 2) ?></span></div>
+          <?php if ($change > 0): ?><div class="r-row"><span>Change</span><span>J$<?= number_format($change, 2) ?></span></div><?php endif; ?>
+          <div class="r-line"></div>
+          <p style="text-align:center;color:#888;font-size:0.78rem">Thank you for shopping with us!</p>
+        </div>
+        <?php
+        require_once __DIR__ . '/footer.php';
+        exit;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────
+   POS register
+   ───────────────────────────────────────────────────────────── */
+$products = $pdo->query("SELECT id, name, brand, sku, price, stock, image FROM products
+                         WHERE active = 1 ORDER BY name")->fetchAll();
+$customers = $pdo->query("SELECT id, name, email, phone FROM users WHERE role = 'customer' AND active = 1 ORDER BY name")->fetchAll();
+
+$jsProducts = array_map(fn($p) => [
+    'id' => (int)$p['id'], 'name' => $p['name'], 'sku' => $p['sku'] ?? '',
+    'price' => (float)$p['price'], 'stock' => (int)$p['stock'],
+    'img' => product_img($p['image']),
+], $products);
+$jsCustomers = array_map(fn($c) => [
+    'id' => (int)$c['id'], 'name' => $c['name'], 'email' => $c['email'] ?? '', 'phone' => $c['phone'] ?? '',
+], $customers);
+
+$err = flash('error');
+?>
+<style>
+.pos-grid { display:grid; grid-template-columns:1fr 380px; gap:20px; align-items:start; }
+.pos-products { background:var(--white); border:1px solid var(--grey-light); border-radius:12px; padding:16px; }
+.pos-search { width:100%; margin-bottom:14px; }
+.pos-cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; max-height:64vh; overflow:auto; }
+.pos-card { border:1px solid var(--grey-light); border-radius:10px; padding:10px; cursor:pointer; text-align:left; background:#fff; transition:border-color .12s, box-shadow .12s; }
+.pos-card:hover { border-color:var(--rose-gold); box-shadow:0 2px 10px rgba(0,0,0,.06); }
+.pos-card.oos { opacity:.45; cursor:not-allowed; }
+.pos-card img { width:100%; height:78px; object-fit:cover; border-radius:6px; background:#f4f4f4; }
+.pos-card .pc-name { font-size:0.78rem; font-weight:600; margin-top:6px; line-height:1.25; height:2.4em; overflow:hidden; }
+.pos-card .pc-meta { display:flex; justify-content:space-between; font-size:0.74rem; margin-top:4px; }
+.pos-card .pc-price { font-weight:700; color:var(--rose-gold); }
+.pos-ticket { background:var(--white); border:1px solid var(--grey-light); border-radius:12px; padding:18px; position:sticky; top:80px; }
+.tk-item { display:flex; align-items:center; gap:8px; padding:7px 0; border-bottom:1px solid var(--grey-light); font-size:0.84rem; }
+.tk-item .tk-name { flex:1; min-width:0; }
+.tk-qbtn { width:24px; height:24px; border:1px solid var(--grey-light); background:#fff; border-radius:6px; cursor:pointer; font-weight:700; }
+.tk-rm { color:#c0392b; cursor:pointer; font-size:0.9rem; background:none; border:none; }
+.tk-empty { color:#999; text-align:center; padding:30px 0; font-size:0.85rem; }
+.tk-row { display:flex; justify-content:space-between; margin:5px 0; font-size:0.9rem; }
+.tk-total { font-weight:700; font-size:1.15rem; }
+.pos-field { width:100%; margin:6px 0; }
+</style>
+
+<?php if ($err): ?><div class="badge-danger" style="padding:12px 16px;border-radius:8px;margin-bottom:16px;display:block"><?= h($err) ?></div><?php endif; ?>
+
+<div class="pos-grid">
+  <!-- Products -->
+  <div class="pos-products">
+    <input type="text" id="posSearch" class="form-control pos-search" placeholder="🔍 Search product name or SKU…" autocomplete="off" autofocus>
+    <div class="pos-cards" id="posCards"></div>
+  </div>
+
+  <!-- Ticket -->
+  <div class="pos-ticket">
+    <h2 style="font-size:1rem;margin-bottom:10px">Current Sale</h2>
+
+    <select class="form-control pos-field" id="posCustomer">
+      <option value="0">🚶 Walk-in Customer</option>
+      <?php foreach ($jsCustomers as $c): ?>
+      <option value="<?= $c['id'] ?>"><?= h($c['name']) ?><?= $c['phone'] ? ' · '.h($c['phone']) : '' ?></option>
+      <?php endforeach; ?>
+    </select>
+
+    <div id="tkItems"><div class="tk-empty">No items yet — tap a product to add it.</div></div>
+
+    <div style="margin-top:12px">
+      <div class="tk-row"><span>Subtotal</span><span id="tkSubtotal">J$0.00</span></div>
+      <div class="tk-row" style="align-items:center">
+        <span>Discount (J$)</span>
+        <input type="number" id="posDiscount" class="form-control" value="0" min="0" step="0.01" style="width:110px;text-align:right">
+      </div>
+      <div class="tk-row">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="posGct" checked> GCT (15%)</label>
+        <span id="tkTax">J$0.00</span>
+      </div>
+      <div class="tk-row tk-total" style="border-top:2px solid var(--grey-light);padding-top:8px;margin-top:8px"><span>Total</span><span id="tkTotal">J$0.00</span></div>
+    </div>
+
+    <select class="form-control pos-field" id="posPayment" style="margin-top:12px">
+      <option value="cash">💵 Cash</option>
+      <option value="card">💳 Card</option>
+      <option value="transfer">🏦 Bank Transfer</option>
+    </select>
+
+    <div id="cashRow">
+      <div class="tk-row" style="align-items:center">
+        <span>Cash tendered</span>
+        <input type="number" id="posTendered" class="form-control" value="" min="0" step="0.01" placeholder="0.00" style="width:120px;text-align:right">
+      </div>
+      <div class="tk-row" style="font-weight:700"><span>Change</span><span id="tkChange">J$0.00</span></div>
+    </div>
+
+    <form method="post" id="saleForm">
+      <?= csrf_field() ?>
+      <input type="hidden" name="complete_sale" value="1">
+      <input type="hidden" name="cart_json" id="cartJson">
+      <input type="hidden" name="customer_id" id="fCustId">
+      <input type="hidden" name="customer_name" id="fCustName">
+      <input type="hidden" name="customer_email" id="fCustEmail">
+      <input type="hidden" name="customer_phone" id="fCustPhone">
+      <input type="hidden" name="payment_method" id="fPayment">
+      <input type="hidden" name="charge_gct" id="fGct">
+      <input type="hidden" name="discount" id="fDiscount">
+      <input type="hidden" name="amount_paid" id="fTendered">
+      <button type="submit" class="btn btn-primary" id="btnComplete" style="width:100%;margin-top:14px;padding:14px;font-size:1rem" disabled>Complete Sale</button>
+    </form>
+    <button type="button" class="btn btn-outline btn-sm" id="btnClear" style="width:100%;margin-top:8px">Clear Sale</button>
+  </div>
+</div>
+
+<script>
+const PRODUCTS = <?= json_encode($jsProducts) ?>;
+const CUSTOMERS = <?= json_encode($jsCustomers) ?>;
+const TAX_RATE = <?= $TAX ?>;
+const money = n => 'J$' + (Math.round(n * 100) / 100).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+let cart = []; // {id,name,price,qty,stock}
+
+const cardsEl = document.getElementById('posCards');
+function renderCards(filter='') {
+  const f = filter.trim().toLowerCase();
+  cardsEl.innerHTML = '';
+  PRODUCTS.filter(p => !f || p.name.toLowerCase().includes(f) || (p.sku && p.sku.toLowerCase().includes(f)))
+    .forEach(p => {
+      const oos = p.stock <= 0;
+      const d = document.createElement('div');
+      d.className = 'pos-card' + (oos ? ' oos' : '');
+      d.innerHTML = `<img src="${p.img}" alt="" onerror="this.style.visibility='hidden'">
+        <div class="pc-name">${p.name.replace(/</g,'&lt;')}</div>
+        <div class="pc-meta"><span class="pc-price">${money(p.price)}</span><span style="color:${oos?'#c0392b':'#888'}">${oos?'Out':('Stk '+p.stock)}</span></div>`;
+      if (!oos) d.onclick = () => addItem(p);
+      cardsEl.appendChild(d);
+    });
+}
+function addItem(p) {
+  const ex = cart.find(c => c.id === p.id);
+  if (ex) { if (ex.qty < p.stock) ex.qty++; }
+  else cart.push({id:p.id, name:p.name, price:p.price, qty:1, stock:p.stock});
+  renderTicket();
+}
+function setQty(id, q) {
+  const c = cart.find(x => x.id === id); if (!c) return;
+  c.qty = Math.max(0, Math.min(q, c.stock));
+  if (c.qty === 0) cart = cart.filter(x => x.id !== id);
+  renderTicket();
+}
+function renderTicket() {
+  const el = document.getElementById('tkItems');
+  if (!cart.length) { el.innerHTML = '<div class="tk-empty">No items yet — tap a product to add it.</div>'; }
+  else {
+    el.innerHTML = cart.map(c => `<div class="tk-item">
+        <button class="tk-qbtn" onclick="setQty(${c.id}, ${c.qty-1})">−</button>
+        <span style="min-width:20px;text-align:center">${c.qty}</span>
+        <button class="tk-qbtn" onclick="setQty(${c.id}, ${c.qty+1})">+</button>
+        <span class="tk-name">${c.name.replace(/</g,'&lt;')}<br><small style="color:#888">${money(c.price)} ea</small></span>
+        <span style="font-weight:700">${money(c.price*c.qty)}</span>
+        <button class="tk-rm" onclick="setQty(${c.id},0)" title="Remove">✕</button>
+      </div>`).join('');
+  }
+  recalc();
+}
+function recalc() {
+  const subtotal = cart.reduce((s,c) => s + c.price*c.qty, 0);
+  let discount = parseFloat(document.getElementById('posDiscount').value) || 0;
+  discount = Math.max(0, Math.min(discount, subtotal));
+  const gct = document.getElementById('posGct').checked;
+  const tax = gct ? (subtotal - discount) * TAX_RATE : 0;
+  const total = subtotal - discount + tax;
+  document.getElementById('tkSubtotal').textContent = money(subtotal);
+  document.getElementById('tkTax').textContent = money(tax);
+  document.getElementById('tkTotal').textContent = money(total);
+  const tendered = parseFloat(document.getElementById('posTendered').value) || 0;
+  document.getElementById('tkChange').textContent = money(Math.max(0, tendered - total));
+  document.getElementById('btnComplete').disabled = cart.length === 0;
+  return {subtotal, discount, tax, total, tendered};
+}
+document.getElementById('posSearch').addEventListener('input', e => renderCards(e.target.value));
+['posDiscount','posGct','posTendered'].forEach(id => document.getElementById(id).addEventListener('input', recalc));
+document.getElementById('posPayment').addEventListener('change', e => {
+  document.getElementById('cashRow').style.display = e.target.value === 'cash' ? '' : 'none';
+});
+document.getElementById('btnClear').onclick = () => { cart = []; document.getElementById('posDiscount').value = 0; document.getElementById('posTendered').value = ''; renderTicket(); };
+
+document.getElementById('saleForm').addEventListener('submit', e => {
+  const t = recalc();
+  if (!cart.length) { e.preventDefault(); return; }
+  const pay = document.getElementById('posPayment').value;
+  if (pay === 'cash' && t.tendered > 0 && t.tendered < t.total) {
+    if (!confirm('Cash tendered is less than the total. Continue anyway?')) { e.preventDefault(); return; }
+  }
+  const cust = CUSTOMERS.find(c => c.id == document.getElementById('posCustomer').value);
+  document.getElementById('cartJson').value = JSON.stringify(cart.map(c => ({id:c.id, qty:c.qty})));
+  document.getElementById('fCustId').value = cust ? cust.id : 0;
+  document.getElementById('fCustName').value = cust ? cust.name : 'Walk-in Customer';
+  document.getElementById('fCustEmail').value = cust ? cust.email : '';
+  document.getElementById('fCustPhone').value = cust ? cust.phone : '';
+  document.getElementById('fPayment').value = pay;
+  document.getElementById('fGct').value = document.getElementById('posGct').checked ? '1' : '';
+  document.getElementById('fDiscount').value = t.discount;
+  document.getElementById('fTendered').value = t.tendered;
+  document.getElementById('btnComplete').disabled = true;
+  document.getElementById('btnComplete').textContent = 'Processing…';
+});
+
+renderCards();
+renderTicket();
+</script>
+
+<?php require_once __DIR__ . '/footer.php'; ?>

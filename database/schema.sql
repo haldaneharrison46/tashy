@@ -115,8 +115,12 @@ CREATE TABLE IF NOT EXISTS orders (
   subtotal     DECIMAL(10,2)  NOT NULL,
   shipping     DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
   tax          DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+  discount     DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
   total        DECIMAL(10,2)  NOT NULL,
+  amount_paid  DECIMAL(10,2)  DEFAULT NULL,
   currency     VARCHAR(10)    NOT NULL DEFAULT 'JMD',
+  payment_method VARCHAR(20)  NOT NULL DEFAULT 'cod',
+  channel      VARCHAR(20)    NOT NULL DEFAULT 'online',
   ship_name    VARCHAR(100)   DEFAULT NULL,
   ship_email   VARCHAR(150)   DEFAULT NULL,
   ship_phone   VARCHAR(30)    DEFAULT NULL,
@@ -166,11 +170,41 @@ CREATE TABLE IF NOT EXISTS contact_messages (
   created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Settings (editable key/value config) ─────────────────────
+CREATE TABLE IF NOT EXISTS settings (
+  skey VARCHAR(60)  PRIMARY KEY,
+  sval VARCHAR(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Shipping Zones ───────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS shipping_zones (
+  id             INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  name           VARCHAR(100)  NOT NULL,
+  parishes       TEXT          NOT NULL,           -- comma-separated parish names
+  rate           DECIMAL(10,2) NOT NULL DEFAULT 0,
+  free_threshold DECIMAL(10,2) DEFAULT NULL,       -- NULL = use global threshold
+  active         TINYINT(1)    NOT NULL DEFAULT 1,
+  sort_order     INT           NOT NULL DEFAULT 0,
+  created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
 -- SEED DATA
 -- ============================================================
+
+-- Settings
+INSERT IGNORE INTO settings (skey, sval) VALUES
+  ('default_shipping_rate',   '1500'),
+  ('free_shipping_threshold', '5000');
+
+-- Shipping zones
+INSERT IGNORE INTO shipping_zones (id, name, parishes, rate, free_threshold, active, sort_order) VALUES
+  (1, 'Falmouth / Trelawny (Local)', 'Trelawny', 600.00, NULL, 1, 1),
+  (2, 'Western Jamaica', 'St. James,Hanover,Westmoreland,St. Elizabeth', 1200.00, NULL, 1, 2),
+  (3, 'Central Jamaica', 'St. Ann,Manchester,Clarendon', 1500.00, NULL, 1, 3),
+  (4, 'Kingston & Eastern', 'Kingston,St. Andrew,St. Catherine,St. Thomas,Portland,St. Mary', 1800.00, NULL, 1, 4);
 
 -- Categories
 INSERT IGNORE INTO categories (id, name, slug, description, image, sort_order) VALUES

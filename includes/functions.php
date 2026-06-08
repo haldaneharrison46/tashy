@@ -181,6 +181,67 @@ function generate_order_number(): string {
     return 'TK-' . strtoupper(substr(uniqid(), -6)) . '-' . date('Y');
 }
 
+// ── Settings (editable key/value config) ──────────────────────
+function get_setting(string $key, ?string $default = null): ?string {
+    static $cache = null;
+    if ($cache === null) {
+        $cache = [];
+        try {
+            foreach (db()->query('SELECT skey, sval FROM settings')->fetchAll() as $r) {
+                $cache[$r['skey']] = $r['sval'];
+            }
+        } catch (Throwable $e) { $cache = []; }
+    }
+    return array_key_exists($key, $cache) ? $cache[$key] : $default;
+}
+function set_setting(string $key, string $val): void {
+    db()->prepare('INSERT INTO settings (skey, sval) VALUES (?, ?)
+                   ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute([$key, $val]);
+}
+
+// ── Shipping ──────────────────────────────────────────────────
+function shipping_default_rate(): float {
+    return (float)get_setting('default_shipping_rate', '1500');
+}
+function free_shipping_threshold(): float {
+    $v = get_setting('free_shipping_threshold', null);
+    if ($v !== null && $v !== '') return (float)$v;
+    return defined('FREE_SHIPPING_THRESHOLD') ? (float)FREE_SHIPPING_THRESHOLD : 5000.0;
+}
+function get_shipping_zones(bool $activeOnly = false): array {
+    try {
+        $sql = 'SELECT * FROM shipping_zones ' . ($activeOnly ? 'WHERE active = 1 ' : '') . 'ORDER BY sort_order, id';
+        return db()->query($sql)->fetchAll();
+    } catch (Throwable $e) { return []; }
+}
+function find_shipping_zone(string $parish): ?array {
+    $parish = trim($parish);
+    if ($parish === '') return null;
+    foreach (get_shipping_zones(true) as $z) {
+        foreach (array_map('trim', explode(',', $z['parishes'])) as $p) {
+            if ($p !== '' && strcasecmp($p, $parish) === 0) return $z;
+        }
+    }
+    return null;
+}
+// Shipping charge for a parish given the order subtotal (0 if a free threshold is met).
+function shipping_for_parish(string $parish, float $subtotal): float {
+    if ($subtotal <= 0) return 0.0;
+    $zone = find_shipping_zone($parish);
+    $rate = $zone ? (float)$zone['rate'] : shipping_default_rate();
+    $thr  = ($zone && $zone['free_threshold'] !== null && $zone['free_threshold'] !== '')
+            ? (float)$zone['free_threshold'] : free_shipping_threshold();
+    if ($thr > 0 && $subtotal >= $thr) return 0.0;
+    return $rate;
+}
+
+// Jamaica parishes (shared by checkout & shipping admin)
+function jamaica_parishes(): array {
+    return ['Kingston','St. Andrew','St. Thomas','Portland','St. Mary','St. Ann',
+            'Trelawny','St. James','Hanover','Westmoreland','St. Elizabeth',
+            'Manchester','Clarendon','St. Catherine'];
+}
+
 // ── Image path helper ─────────────────────────────────────────
 function product_img(string $img = '', string $fallback = 'placeholder.svg'): string {
     return SITE_URL . '/assets/images/' . ($img ?: $fallback);

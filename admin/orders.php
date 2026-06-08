@@ -55,6 +55,7 @@ if ($viewId) {
           </table>
           <div style="border-top:2px solid var(--grey-light);margin-top:12px;padding-top:12px;max-width:220px;margin-left:auto;font-size:0.88rem">
             <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Subtotal</span><span><?= money($order['subtotal']) ?></span></div>
+            <?php if (($order['discount'] ?? 0) > 0): ?><div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Discount</span><span>−<?= money($order['discount']) ?></span></div><?php endif; ?>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>Shipping</span><span><?= $order['shipping'] > 0 ? money($order['shipping']) : 'FREE' ?></span></div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>GCT</span><span><?= money($order['tax']) ?></span></div>
             <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem"><span>Total</span><span><?= money($order['total']) ?></span></div>
@@ -141,7 +142,10 @@ $ok = flash('success');
       </td>
       <td style="font-weight:600"><?= money($o['total']) ?></td>
       <td><span class="badge badge-<?= $statusColors[$o['status']] ?? 'grey' ?>"><?= ucfirst($o['status']) ?></span></td>
-      <td style="font-size:0.8rem;color:#888">COD</td>
+      <td style="font-size:0.8rem;color:#888">
+        <?= strtoupper(h($o['payment_method'] ?? 'cod')) ?>
+        <?php if (($o['channel'] ?? 'online') === 'pos'): ?><span class="badge badge-info" style="margin-left:4px">POS</span><?php endif; ?>
+      </td>
       <td style="color:#888;font-size:0.8rem"><?= date('d M y', strtotime($o['created_at'])) ?></td>
       <td><a href="orders.php?id=<?= $o['id'] ?>" style="color:var(--rose-gold);font-size:0.82rem">View →</a></td>
     </tr>

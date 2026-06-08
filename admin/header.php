@@ -91,9 +91,13 @@ body { display:flex; min-height:100vh; flex-direction:column; }
     <nav>
       <div class="section-label">Main</div>
       <a href="index.php"    class="<?= $currentPage==='index.php'    ? 'active':'' ?>"><span class="icon">📊</span> Dashboard</a>
+      <a href="pos.php"      class="<?= $currentPage==='pos.php'      ? 'active':'' ?>"><span class="icon">🧾</span> Point of Sale</a>
       <a href="products.php" class="<?= $currentPage==='products.php' ? 'active':'' ?>"><span class="icon">🛍️</span> Products</a>
       <a href="orders.php"   class="<?= $currentPage==='orders.php'   ? 'active':'' ?>"><span class="icon">📦</span> Orders</a>
-      <a href="users.php"    class="<?= $currentPage==='users.php'    ? 'active':'' ?>"><span class="icon">👥</span> Users</a>
+      <a href="customers.php" class="<?= $currentPage==='customers.php' ? 'active':'' ?>"><span class="icon">🧑</span> Customers</a>
+      <div class="section-label">Configuration</div>
+      <a href="shipping.php" class="<?= $currentPage==='shipping.php' ? 'active':'' ?>"><span class="icon">🚚</span> Shipping</a>
+      <a href="users.php"    class="<?= $currentPage==='users.php'    ? 'active':'' ?>"><span class="icon">👥</span> Staff &amp; Users</a>
       <a href="subscribers.php" class="<?= $currentPage==='subscribers.php' ? 'active':'' ?>"><span class="icon">✉️</span> Subscribers</a>
       <div class="section-label">Site</div>
       <a href="<?= SITE_URL ?>" target="_blank"><span class="icon">🌐</span> View Store</a>
