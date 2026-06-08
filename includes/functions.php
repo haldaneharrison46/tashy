@@ -51,7 +51,13 @@ function csrf_check(): void {
 
 // ── Currency formatting ───────────────────────────────────────
 function money(float $amount): string {
-    return CURRENCY_SYMBOL . number_format($amount, 2);
+    // CURRENCY_SYMBOL can be clobbered by a hosting-injected constant of the
+    // same name (observed value "262145" on IONOS), and PHP's define() silently
+    // ignores our 'J$' once that exists. Fall back to the JMD symbol whenever
+    // the defined value isn't a sensible currency symbol.
+    $sym = (defined('CURRENCY_SYMBOL') && !ctype_digit((string) CURRENCY_SYMBOL))
+        ? CURRENCY_SYMBOL : 'J$';
+    return $sym . number_format($amount, 2);
 }
 
 // ── Slug generator ────────────────────────────────────────────
