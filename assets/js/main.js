@@ -280,3 +280,72 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
 });
+
+/* ============================================================
+ * Global handlers for inline onclick (product cards & PDP).
+ * Templates call addToCart(id, btn[, qty]) and toggleWishlist(btn),
+ * so these MUST live at top-level (global) scope.
+ * ============================================================ */
+function tkToast(msg, isError) {
+  var toast = document.getElementById('toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast';
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:99999;padding:14px 22px;border-radius:10px;font-size:0.9rem;font-weight:600;max-width:300px;box-shadow:0 4px 16px rgba(0,0,0,.15);transition:opacity .3s';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.background = isError ? '#fef2f2' : '#1a1a1a';
+  toast.style.color = isError ? '#c0392b' : '#fff';
+  toast.style.opacity = '1';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(function () { toast.style.opacity = '0'; }, 3000);
+}
+
+function tkSetCartCount(n) {
+  document.querySelectorAll('.cart-count').forEach(function (el) {
+    el.textContent = n || '';
+    el.style.display = n ? 'flex' : 'none';
+  });
+}
+
+function addToCart(productId, btn, qty) {
+  qty = parseInt(qty) || 1;
+  var orig = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
+  fetch('/api/cart.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'add', product_id: parseInt(productId), quantity: qty })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.ok) { tkToast(d.message || 'Added to cart!'); tkSetCartCount(d.count); }
+      else { tkToast(d.error || 'Could not add to cart.', true); }
+    })
+    .catch(function () { tkToast('Connection error.', true); })
+    .finally(function () { if (btn) { btn.disabled = false; btn.textContent = orig || 'Add to Cart'; } });
+}
+
+function toggleWishlist(btn) {
+  var pid = btn.getAttribute('data-product-id');
+  fetch('/api/wishlist.php', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ product_id: parseInt(pid) })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.ok) {
+        var added = d.action === 'added';
+        btn.classList.toggle('active', added);
+        btn.setAttribute('aria-label', added ? 'Remove from wishlist' : 'Add to wishlist');
+        tkToast(added ? 'Added to wishlist!' : 'Removed from wishlist.');
+      } else if (d.login) {
+        window.location.href = '/login.php?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+      } else {
+        tkToast(d.error || 'Error.', true);
+      }
+    })
+    .catch(function () { tkToast('Connection error.', true); });
+}
