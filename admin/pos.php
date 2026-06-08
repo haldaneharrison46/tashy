@@ -1,6 +1,9 @@
 <?php
-$pageTitle = 'Point of Sale';
-require_once __DIR__ . '/header.php';
+// Bootstrap auth + DB BEFORE any output so the post-sale redirect works
+// (the server has output_buffering OFF, so header.php must come after the POST handlers).
+require_once dirname(__DIR__) . '/includes/functions.php';
+require_once dirname(__DIR__) . '/includes/auth.php';
+require_admin();
 
 $pdo = db();
 $TAX = defined('TAX_RATE') ? (float)TAX_RATE : 0.15;
@@ -125,6 +128,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email_invoice'])) {
     }
     redirect(SITE_URL . '/admin/pos.php?receipt=' . $oid);
 }
+
+// ── All redirecting POST handlers are done; safe to start output now ──
+$pageTitle = 'Point of Sale';
+require_once __DIR__ . '/header.php';
 
 /* ─────────────────────────────────────────────────────────────
    Receipt view

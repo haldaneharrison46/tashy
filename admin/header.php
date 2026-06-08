@@ -1,6 +1,9 @@
 <?php
 // Admin header — included by every admin page
 // Expects $pageTitle to be set before including
+// Buffer output so admin pages can still redirect() after this header is sent
+// (this server has output_buffering = 0). The buffer flushes normally at page end.
+if (!ob_get_level()) ob_start();
 require_once dirname(__DIR__) . '/includes/functions.php';
 require_once dirname(__DIR__) . '/includes/auth.php';
 require_admin(); // redirects non-admins
