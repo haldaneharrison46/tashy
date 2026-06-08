@@ -1,23 +1,36 @@
 <?php
 $pageTitle = 'Orders';
 require_once __DIR__ . '/header.php';
+require_once dirname(__DIR__) . '/includes/orders.php';
 
 $pdo    = db();
 $viewId = (int)($_GET['id'] ?? 0);
 
-$statuses = ['pending','processing','shipped','delivered','cancelled'];
-$statusColors = ['pending'=>'warning','processing'=>'info','shipped'=>'info','delivered'=>'success','cancelled'=>'danger'];
+$statuses     = order_statuses();
+$statusColors = order_status_colors();
 
-/* ── Update order status ───────────────────── */
+/* ── Update order status (logs history + emails customer) ── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     csrf_check();
     $oid    = (int)$_POST['order_id'];
     $status = $_POST['status'] ?? '';
-    if (in_array($status, $statuses)) {
-        $pdo->prepare("UPDATE orders SET status=? WHERE id=?")->execute([$status, $oid]);
-        flash('success', 'Order status updated.');
+    $note   = trim($_POST['status_note'] ?? '');
+    if (record_order_status($oid, $status, $note, current_user()['name'])) {
+        flash('success', 'Status updated — customer notified.');
     }
     redirect(SITE_URL . '/admin/orders.php' . ($viewId ? "?id=$oid" : ''));
+}
+
+/* ── Tag order for follow-up ───────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_order'])) {
+    csrf_check();
+    $oid = (int)$_POST['order_id'];
+    $ch  = in_array($_POST['followup_channel'] ?? '', ['chat','email','whatsapp','call',''], true) ? ($_POST['followup_channel'] ?? '') : '';
+    $nt  = trim($_POST['followup_note'] ?? '');
+    $pdo->prepare("UPDATE orders SET followup_channel=?, followup_note=? WHERE id=?")
+        ->execute([$ch !== '' ? $ch : null, $nt !== '' ? $nt : null, $oid]);
+    flash('success', $ch ? 'Order tagged for follow-up.' : 'Follow-up tag cleared.');
+    redirect(SITE_URL . '/admin/orders.php?id=' . $oid);
 }
 
 /* ── Single order view ─────────────────────── */
@@ -30,6 +43,8 @@ if ($viewId) {
     $items = $pdo->prepare("SELECT * FROM order_items WHERE order_id=?");
     $items->execute([$viewId]);
     $items = $items->fetchAll();
+    $history = get_order_history($viewId);
+    $links   = order_contact_links($order);
     ?>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
       <a href="orders.php" style="color:var(--rose-gold)">&larr; Back to Orders</a>
@@ -61,6 +76,19 @@ if ($viewId) {
             <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem"><span>Total</span><span><?= money($order['total']) ?></span></div>
           </div>
         </div>
+
+        <div class="admin-card">
+          <h2>Status History</h2>
+          <?php foreach (array_reverse($history) as $hh): ?>
+          <div style="display:flex;gap:8px;margin-bottom:8px;font-size:0.84rem">
+            <span style="color:var(--rose-gold)">●</span>
+            <div><strong><?= ucfirst(h($hh['status'])) ?></strong>
+              <span style="color:#999;font-size:0.76rem">· <?= date('d M y, g:ia', strtotime($hh['created_at'])) ?><?= $hh['created_by'] ? ' · ' . h($hh['created_by']) : '' ?></span>
+              <?php if (!empty($hh['note']) && $hh['note'] !== 'Imported'): ?><div style="color:#888;font-size:0.8rem"><?= h($hh['note']) ?></div><?php endif; ?>
+            </div>
+          </div>
+          <?php endforeach; ?>
+        </div>
       </div>
 
       <div>
@@ -71,12 +99,14 @@ if ($viewId) {
             <?= csrf_field() ?>
             <input type="hidden" name="update_status" value="1">
             <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-            <select name="status" class="form-control" style="margin-bottom:10px">
+            <select name="status" class="form-control" style="margin-bottom:8px">
               <?php foreach ($statuses as $s): ?>
               <option value="<?= $s ?>" <?= $order['status']===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
               <?php endforeach; ?>
             </select>
-            <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Update</button>
+            <input type="text" name="status_note" class="form-control" placeholder="Note (optional, e.g. tracking #)" style="margin-bottom:8px">
+            <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Update &amp; notify</button>
+            <a href="<?= SITE_URL ?>/track.php?order=<?= urlencode($order['order_number']) ?>" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:0.78rem;color:var(--rose-gold)">View public tracking ↗</a>
           </form>
         </div>
 
@@ -90,6 +120,26 @@ if ($viewId) {
           <?php if ($order['notes']): ?>
           <p style="font-size:0.8rem;margin-top:10px;color:#888"><em>Note: <?= h($order['notes']) ?></em></p>
           <?php endif; ?>
+          <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+            <?php if (!empty($links['whatsapp'])): ?><a href="<?= h($links['whatsapp']) ?>" target="_blank" rel="noopener" class="btn btn-outline btn-sm">WhatsApp</a><?php endif; ?>
+            <?php if (!empty($links['email'])): ?><a href="<?= h($links['email']) ?>" class="btn btn-outline btn-sm">Email</a><?php endif; ?>
+          </div>
+        </div>
+
+        <div class="admin-card" style="margin-top:16px">
+          <h2>Follow-up Tag <?php if (!empty($order['followup_channel'])): ?><span style="font-size:0.9rem">🏷️</span><?php endif; ?></h2>
+          <form method="post">
+            <?= csrf_field() ?>
+            <input type="hidden" name="tag_order" value="1">
+            <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+            <select name="followup_channel" class="form-control" style="margin-bottom:8px">
+              <?php foreach (['' => '— none —','chat'=>'💬 Chat','email'=>'✉ Email','whatsapp'=>'WhatsApp','call'=>'📞 Call'] as $cv=>$cl): ?>
+              <option value="<?= $cv ?>" <?= ($order['followup_channel'] ?? '')===$cv?'selected':'' ?>><?= h($cl) ?></option>
+              <?php endforeach; ?>
+            </select>
+            <input type="text" name="followup_note" class="form-control" placeholder="Follow-up note" value="<?= h($order['followup_note'] ?? '') ?>" style="margin-bottom:8px">
+            <button type="submit" class="btn btn-outline btn-sm" style="width:100%">Save Tag</button>
+          </form>
         </div>
       </div>
     </div>

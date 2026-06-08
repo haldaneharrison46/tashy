@@ -38,6 +38,7 @@
       <div class="footer-col">
         <h4>Help</h4>
         <ul>
+          <li><a href="<?= SITE_URL ?>/track.php">Track Your Order</a></li>
           <li><a href="<?= SITE_URL ?>/contact.php">Contact Us</a></li>
           <li><a href="<?= SITE_URL ?>/policy.php">Shipping &amp; Returns</a></li>
           <li><a href="<?= SITE_URL ?>/wholesale.php">Wholesale B2B</a></li>

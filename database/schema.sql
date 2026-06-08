@@ -129,6 +129,8 @@ CREATE TABLE IF NOT EXISTS orders (
   ship_parish  VARCHAR(100)   DEFAULT NULL,
   ship_country VARCHAR(100)   NOT NULL DEFAULT 'Jamaica',
   notes        TEXT           DEFAULT NULL,
+  followup_channel VARCHAR(20) DEFAULT NULL,
+  followup_note    VARCHAR(255) DEFAULT NULL,
   created_at   TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
   INDEX idx_user   (user_id),
@@ -218,6 +220,18 @@ CREATE TABLE IF NOT EXISTS product_images (
   created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_product (product_id),
   FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Order Status History ─────────────────────────────────────
+CREATE TABLE IF NOT EXISTS order_status_history (
+  id         INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  order_id   INT UNSIGNED NOT NULL,
+  status     VARCHAR(20)  NOT NULL,
+  note       VARCHAR(255) DEFAULT NULL,
+  created_by VARCHAR(100) DEFAULT NULL,
+  created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_order (order_id),
+  FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;
