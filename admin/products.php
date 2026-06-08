@@ -191,7 +191,10 @@ if ($action === 'add' || $editProduct) {
           <div style="display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap">
             <img id="coverPreview" src="<?= h(product_img($p['image'] ?: 'placeholder.svg')) ?>" alt="" style="width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid var(--grey-light);background:#f6f6f6" onerror="this.style.opacity=.25">
             <div style="flex:1;min-width:220px">
-              <input type="file" name="image_file" accept="image/*" class="form-control" onchange="pfPreviewCover(this)">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                <input type="file" name="image_file" id="coverFile" accept="image/*" class="form-control" onchange="pfPreviewCover(this)" style="flex:1;min-width:160px">
+                <button type="button" class="btn btn-outline btn-sm" onclick="pfCamera('coverFile')">📷 Take Photo</button>
+              </div>
               <input type="text" name="image" class="form-control" placeholder="…or a filename in assets/images, or a full image URL" value="<?= h($p['image']) ?>" style="margin-top:8px">
               <p style="font-size:0.75rem;color:#888;margin-top:4px">Upload a file (JPG/PNG/GIF/WebP, ≤6 MB), or type a filename/URL. Uploading wins.</p>
             </div>
@@ -213,7 +216,11 @@ if ($action === 'add' || $editProduct) {
             <?php endforeach; ?>
           </div>
           <?php endif; ?>
-          <input type="file" name="gallery[]" accept="image/*" multiple class="form-control" onchange="pfPreviewGallery(this)">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input type="file" name="gallery[]" id="galleryInput" accept="image/*" multiple class="form-control" onchange="pfGalleryChoose(this)" style="flex:1;min-width:160px">
+            <input type="file" id="galleryCam" accept="image/*" capture="environment" style="display:none" onchange="pfGalleryCapture(this)">
+            <button type="button" class="btn btn-outline btn-sm" onclick="document.getElementById('galleryCam').click()">📷 Take Photo</button>
+          </div>
           <div id="galleryPreview" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px"></div>
           <p style="font-size:0.75rem;color:#888;margin-top:4px">Select one or more images to add to this product's gallery.</p>
         </div>
@@ -239,14 +246,38 @@ function pfPreviewCover(input){
   var img = document.getElementById('coverPreview');
   img.src = URL.createObjectURL(f); img.style.opacity = 1;
 }
-function pfPreviewGallery(input){
+// Camera: open the device camera by toggling the file input's capture mode, then click it.
+function pfCamera(id){
+  var el = document.getElementById(id);
+  el.setAttribute('capture', 'environment');
+  el.click();
+  setTimeout(function(){ el.removeAttribute('capture'); }, 1000);  // restore so "choose" can still pick from gallery
+}
+
+// Gallery selection lives in a DataTransfer so camera shots append to chosen files.
+var galleryDT = (typeof DataTransfer !== 'undefined') ? new DataTransfer() : null;
+function pfRenderGallery(){
   var box = document.getElementById('galleryPreview'); box.innerHTML = '';
-  Array.prototype.forEach.call(input.files, function(f){
+  var files = galleryDT ? galleryDT.files : document.getElementById('galleryInput').files;
+  Array.prototype.forEach.call(files, function(f){
     var img = document.createElement('img');
     img.src = URL.createObjectURL(f);
     img.style.cssText = 'width:70px;height:70px;object-fit:cover;border-radius:8px;border:1px solid var(--grey-light)';
     box.appendChild(img);
   });
+}
+function pfGalleryChoose(input){
+  if (galleryDT) { galleryDT = new DataTransfer(); Array.prototype.forEach.call(input.files, function(f){ galleryDT.items.add(f); }); }
+  pfRenderGallery();
+}
+function pfGalleryCapture(input){
+  if (!input.files.length) return;
+  if (galleryDT) {
+    Array.prototype.forEach.call(input.files, function(f){ galleryDT.items.add(f); });
+    document.getElementById('galleryInput').files = galleryDT.files;
+    pfRenderGallery();
+  }
+  input.value = '';
 }
 </script>
 <?php } else { // List view
