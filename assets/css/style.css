@@ -208,6 +208,12 @@
 
 html { scroll-behavior: smooth; font-size: 16px; }
 
+/* Prevent horizontal / side-scroll from any stray wide element.
+   overflow-x: clip doesn't create a scroll container, so the sticky header keeps working
+   (overflow-x: hidden is the fallback for older browsers). */
+html, body { max-width: 100%; overflow-x: hidden; }
+@supports (overflow: clip) { html, body { overflow-x: clip; } }
+
 body {
   font-family: var(--font-body);
   background: var(--off-white);
@@ -883,7 +889,7 @@ p  { font-size: 1rem; color: var(--grey-dark); }
   margin-bottom: 12px;
 }
 .pdp-main-img img { width: 100%; height: 100%; object-fit: cover; }
-.pdp-thumbs { display: flex; gap: 10px; }
+.pdp-thumbs, .pdp-thumb-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .pdp-thumb {
   width: 72px; height: 72px;
   border-radius: var(--radius);
@@ -1301,6 +1307,26 @@ select.form-control { cursor: pointer; }
   .value-grid { grid-template-columns: 1fr; }
   .stat-row { gap: 28px; }
   .wholesale-banner-cta { flex-direction: column; width: 100%; }
+}
+
+/* ── Centered, single-column footer on phones ── */
+@media (max-width: 600px) {
+  .footer-grid { grid-template-columns: 1fr; text-align: center; gap: 26px; }
+  .footer-grid > .footer-brand,
+  .footer-grid > .footer-col { grid-column: 1 / -1; }
+  .footer-logo { display: inline-block; }
+  .footer-tagline,
+  .footer-brand p { margin-left: auto; margin-right: auto; }
+  .footer-address { max-width: none; }
+  .footer-address,
+  .footer-newsletter p { text-align: center; }
+  .footer-social { justify-content: center; }
+  .newsletter-form { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .newsletter-form .btn,
+  .newsletter-form .newsletter-input { width: 100%; }
+  .footer-bottom { flex-direction: column; justify-content: center; text-align: center; gap: 10px; }
+  .footer-copy { width: 100%; }
+  .footer-legal { display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; width: 100%; }
 }
 
 @media (max-width: 480px) {
