@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   email         VARCHAR(150)     NOT NULL UNIQUE,
   password_hash VARCHAR(255)     NOT NULL,
   phone         VARCHAR(30)      DEFAULT NULL,
+  address       VARCHAR(255)     DEFAULT NULL,
   role          ENUM('customer','admin') NOT NULL DEFAULT 'customer',
   active        TINYINT(1)       NOT NULL DEFAULT 1,
   admin_pin_hash VARCHAR(255)    DEFAULT NULL,  -- optional quick-login PIN (staff)

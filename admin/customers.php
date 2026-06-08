@@ -37,6 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_customer'])) {
     $name  = trim($_POST['name'] ?? '');
     $email = strtolower(trim($_POST['email'] ?? ''));
     $phone = trim($_POST['phone'] ?? '');
+    $address = trim($_POST['address'] ?? '');
     $active= isset($_POST['active']) ? 1 : 0;
     $pass  = (string)($_POST['password'] ?? '');
 
@@ -51,8 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_customer'])) {
 
     if ($err) { flash('error', $err); }
     elseif ($id) {
-        $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, active=? WHERE id=?')
-            ->execute([$name, $email, $phone, $active, $id]);
+        $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, address=?, active=? WHERE id=?')
+            ->execute([$name, $email, $phone, $address ?: null, $active, $id]);
         if ($pass !== '') {
             $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')
                 ->execute([password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]), $id]);
@@ -61,8 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_customer'])) {
         redirect(SITE_URL . '/admin/customers.php?id=' . $id);
     } else {
         $hash = password_hash($pass !== '' ? $pass : bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
-        $pdo->prepare('INSERT INTO users (name, email, phone, password_hash, role, active) VALUES (?,?,?,?,?,?)')
-            ->execute([$name, $email, $phone, $hash, 'customer', $active]);
+        $pdo->prepare('INSERT INTO users (name, email, phone, address, password_hash, role, active) VALUES (?,?,?,?,?,?,?)')
+            ->execute([$name, $email, $phone, $address ?: null, $hash, 'customer', $active]);
         flash('success', 'Customer added.');
         redirect(SITE_URL . '/admin/customers.php?id=' . (int)$pdo->lastInsertId());
     }
@@ -86,7 +87,7 @@ if ($action === 'edit' && $viewId) {
     $editC = $st->fetch();
 }
 if ($action === 'add' || $editC) {
-    $c = $editC ?? ['id'=>0,'name'=>'','email'=>'','phone'=>'','active'=>1];
+    $c = $editC ?? ['id'=>0,'name'=>'','email'=>'','phone'=>'','address'=>'','active'=>1];
     $err = flash('error');
     ?>
     <div style="margin-bottom:18px"><a href="customers.php" style="color:var(--rose-gold)">&larr; Back to Customers</a></div>
@@ -104,6 +105,8 @@ if ($action === 'add' || $editC) {
             <input type="email" name="email" class="form-control" required value="<?= h($c['email']) ?>"></div>
           <div class="form-group"><label class="form-label">Phone</label>
             <input type="text" name="phone" class="form-control" value="<?= h($c['phone'] ?? '') ?>"></div>
+          <div class="form-group full"><label class="form-label">Address</label>
+            <input type="text" name="address" class="form-control" value="<?= h($c['address'] ?? '') ?>" placeholder="Street, city, parish"></div>
           <div class="form-group full"><label class="form-label"><?= $editC ? 'Reset Password (optional)' : 'Password (optional — random if blank)' ?></label>
             <input type="text" name="password" class="form-control" placeholder="<?= $editC ? 'Leave blank to keep current' : 'Auto-generated if blank' ?>"></div>
           <div class="form-group full">
@@ -172,6 +175,7 @@ if ($viewId) {
           <h2><?= h($c['name']) ?> <?php if (!$c['active']): ?><span class="badge badge-grey">Inactive</span><?php endif; ?></h2>
           <p style="font-size:0.85rem;color:#888;margin-top:6px">✉ <?= h($c['email']) ?></p>
           <p style="font-size:0.85rem;color:#888">📞 <?= h($c['phone'] ?: '—') ?></p>
+          <?php if (!empty($c['address'])): ?><p style="font-size:0.85rem;color:#888">📍 <?= h($c['address']) ?></p><?php endif; ?>
           <p style="font-size:0.8rem;color:#aaa;margin-top:8px">Joined <?= date('d M Y', strtotime($c['created_at'])) ?></p>
           <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
             <a href="customers.php?action=edit&id=<?= (int)$c['id'] ?>" class="btn btn-primary btn-sm">Edit</a>

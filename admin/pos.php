@@ -28,6 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
     $shipCity    = trim($_POST['ship_city'] ?? '');
     $shipParish  = trim($_POST['ship_parish'] ?? '');
     $shipZoneId  = (int)($_POST['ship_zone'] ?? 0);
+    $contact     = trim($_POST['contact'] ?? '');
+    $custAddr    = trim($_POST['cust_address'] ?? '');
+    $instructions= trim($_POST['instructions'] ?? '');
+    $saveCust    = !empty($_POST['save_customer']);
 
     $err = '';
     if (empty($lines)) $err = 'Add at least one item to the sale.';
@@ -75,6 +79,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
                     $orderNum = generate_order_number();
                     $paid = ($payMethod === 'cash' && $tendered > 0) ? $tendered : $total;
                     $status = $fulfil === 'delivery' ? 'processing' : 'delivered';
+
+                    // Optionally save / link a customer record
+                    if ($saveCust && !$custId && $custName !== '' && ($custEmail !== '' || $custPhone !== '')) {
+                        $existId = null;
+                        if ($custEmail !== '') { $ex = $pdo->prepare("SELECT id FROM users WHERE email = ?"); $ex->execute([$custEmail]); $existId = $ex->fetchColumn() ?: null; }
+                        if ($existId) {
+                            $pdo->prepare("UPDATE users SET phone = COALESCE(NULLIF(?,''), phone), address = COALESCE(NULLIF(?,''), address) WHERE id = ?")
+                                ->execute([$custPhone, $custAddr, $existId]);
+                            $custId = (int)$existId;
+                        } else {
+                            $email = $custEmail !== '' ? $custEmail : ('pos+' . substr(md5($custName . microtime()), 0, 8) . '@tashykollections.org');
+                            $pdo->prepare("INSERT INTO users (name, email, phone, address, password_hash, role) VALUES (?,?,?,?,?,?)")
+                                ->execute([$custName, $email, $custPhone ?: null, $custAddr ?: null, password_hash(bin2hex(random_bytes(6)), PASSWORD_BCRYPT, ['cost' => 12]), 'customer']);
+                            $custId = (int)$pdo->lastInsertId();
+                        }
+                    }
+
+                    // Compose notes (alt. contact + delivery instructions)
+                    $noteParts = [($fulfil === 'delivery' ? 'POS delivery sale' : 'In-store POS sale') . ' by ' . current_user()['name']];
+                    if ($contact !== '')       $noteParts[] = 'Contact: ' . $contact;
+                    if ($instructions !== '')  $noteParts[] = 'Instructions: ' . $instructions;
+                    $notes = implode("\n", $noteParts);
+                    $shipAddrFinal = $shipAddr !== '' ? $shipAddr : ($custAddr ?: null);
+
                     $st = $pdo->prepare('INSERT INTO orders
                         (user_id, order_number, status, subtotal, shipping, tax, discount, total, amount_paid,
                          currency, payment_method, channel, ship_name, ship_email, ship_phone,
@@ -85,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
                         $subtotal, $shipping, $tax, $discount, $total, $paid,
                         defined('CURRENCY') ? CURRENCY : 'JMD', $payMethod, 'pos',
                         $custName, $custEmail, $custPhone,
-                        $shipAddr ?: null, $shipCity ?: null, $shipParish ?: null, 'Jamaica',
-                        ($fulfil === 'delivery' ? 'POS delivery sale' : 'In-store POS sale') . ' by ' . current_user()['name'],
+                        $shipAddrFinal, $shipCity ?: null, $shipParish ?: null, 'Jamaica',
+                        $notes,
                     ]);
                     $orderId = (int)$pdo->lastInsertId();
                     $pdo->prepare('INSERT INTO order_status_history (order_id, status, note, created_by) VALUES (?,?,?,?)')
@@ -210,7 +238,7 @@ if ($rid = (int)($_GET['receipt'] ?? 0)) {
    ───────────────────────────────────────────────────────────── */
 $products = $pdo->query("SELECT id, name, brand, sku, price, stock, image FROM products
                          WHERE active = 1 ORDER BY name")->fetchAll();
-$customers = $pdo->query("SELECT id, name, email, phone FROM users WHERE role = 'customer' AND active = 1 ORDER BY name")->fetchAll();
+$customers = $pdo->query("SELECT id, name, email, phone, address FROM users WHERE role = 'customer' AND active = 1 ORDER BY name")->fetchAll();
 $zones     = function_exists('get_shipping_zones') ? get_shipping_zones(true) : [];
 $parishes  = function_exists('jamaica_parishes') ? jamaica_parishes() : [];
 
@@ -220,7 +248,7 @@ $jsProducts = array_map(fn($p) => [
     'img' => product_img($p['image']),
 ], $products);
 $jsCustomers = array_map(fn($c) => [
-    'id' => (int)$c['id'], 'name' => $c['name'], 'email' => $c['email'] ?? '', 'phone' => $c['phone'] ?? '',
+    'id' => (int)$c['id'], 'name' => $c['name'], 'email' => $c['email'] ?? '', 'phone' => $c['phone'] ?? '', 'address' => $c['address'] ?? '',
 ], $customers);
 
 $err = flash('error');
@@ -267,11 +295,14 @@ $err = flash('error');
       <option value="<?= $c['id'] ?>"><?= h($c['name']) ?><?= $c['phone'] ? ' · '.h($c['phone']) : '' ?></option>
       <?php endforeach; ?>
     </select>
-    <input type="text" class="form-control pos-field" id="posCustName" placeholder="Customer name (optional)">
+    <input type="text" class="form-control pos-field" id="posCustName" placeholder="Customer name">
     <div style="display:flex;gap:6px">
-      <input type="text" class="form-control pos-field" id="posCustPhone" placeholder="Phone">
+      <input type="text" class="form-control pos-field" id="posCustPhone" placeholder="Telephone">
       <input type="email" class="form-control pos-field" id="posCustEmail" placeholder="Email">
     </div>
+    <input type="text" class="form-control pos-field" id="posCustContact" placeholder="Alt. contact (name / number)">
+    <input type="text" class="form-control pos-field" id="posCustAddr" placeholder="Customer address">
+    <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;margin:4px 0"><input type="checkbox" id="posSaveCust"> Save as a customer record</label>
 
     <div style="display:flex;gap:6px;margin:8px 0">
       <label style="flex:1;text-align:center;border:1px solid var(--grey-light);border-radius:6px;padding:7px;cursor:pointer;font-size:0.82rem"><input type="radio" name="fulfil" value="pickup" checked> 🏬 Pickup</label>
@@ -290,6 +321,7 @@ $err = flash('error');
         <option value="0" data-rate="0">Shipping method…</option>
         <?php foreach ($zones as $z): ?><option value="<?= (int)$z['id'] ?>" data-rate="<?= h($z['rate']) ?>"><?= h($z['name']) ?> — J$<?= number_format($z['rate'],0) ?></option><?php endforeach; ?>
       </select>
+      <textarea class="form-control pos-field" id="posInstr" rows="2" placeholder="Delivery instructions (optional)"></textarea>
     </div>
 
     <div id="tkItems"><div class="tk-empty">No items yet — tap a product to add it.</div></div>
@@ -346,6 +378,10 @@ $err = flash('error');
       <input type="hidden" name="ship_city" id="fCity">
       <input type="hidden" name="ship_parish" id="fParish">
       <input type="hidden" name="ship_zone" id="fZone">
+      <input type="hidden" name="contact" id="fContact">
+      <input type="hidden" name="cust_address" id="fCustAddr">
+      <input type="hidden" name="instructions" id="fInstr">
+      <input type="hidden" name="save_customer" id="fSaveCust">
       <button type="submit" class="btn btn-primary" id="btnComplete" style="width:100%;margin-top:14px;padding:14px;font-size:1rem" disabled>Complete Sale</button>
     </form>
     <button type="button" class="btn btn-outline btn-sm" id="btnClear" style="width:100%;margin-top:8px">Clear Sale</button>
@@ -454,7 +490,7 @@ document.querySelectorAll('input[name="fulfil"]').forEach(r => r.addEventListene
 document.getElementById('posZone').addEventListener('change', recalc);
 document.getElementById('posCustomer').addEventListener('change', function(){
   const c = CUSTOMERS.find(x => x.id == this.value);
-  if (c) { document.getElementById('posCustName').value = c.name || ''; document.getElementById('posCustPhone').value = c.phone || ''; document.getElementById('posCustEmail').value = c.email || ''; }
+  if (c) { document.getElementById('posCustName').value = c.name || ''; document.getElementById('posCustPhone').value = c.phone || ''; document.getElementById('posCustEmail').value = c.email || ''; document.getElementById('posCustAddr').value = c.address || ''; }
 });
 document.getElementById('posPayment').addEventListener('change', e => {
   document.getElementById('cashRow').style.display = e.target.value === 'cash' ? '' : 'none';
@@ -487,6 +523,10 @@ document.getElementById('saleForm').addEventListener('submit', e => {
   document.getElementById('fCity').value = document.getElementById('posCity').value.trim();
   document.getElementById('fParish').value = document.getElementById('posParish').value;
   document.getElementById('fZone').value = document.getElementById('posZone').value;
+  document.getElementById('fContact').value = document.getElementById('posCustContact').value.trim();
+  document.getElementById('fCustAddr').value = document.getElementById('posCustAddr').value.trim();
+  document.getElementById('fInstr').value = document.getElementById('posInstr').value.trim();
+  document.getElementById('fSaveCust').value = document.getElementById('posSaveCust').checked ? '1' : '';
   document.getElementById('btnComplete').disabled = true;
   document.getElementById('btnComplete').textContent = 'Processing…';
 });
