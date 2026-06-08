@@ -349,3 +349,64 @@ function toggleWishlist(btn) {
     })
     .catch(function () { tkToast('Connection error.', true); });
 }
+
+/* ── Cart drawer quantity / remove (inline onclick) ─────────── */
+function cartQty(itemId, newQty) {
+  if (newQty < 1) { cartRemove(itemId); return; }
+  fetch('/api/cart.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'update', item_id: parseInt(itemId), quantity: parseInt(newQty) })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (d.ok) { window.location.reload(); } else { tkToast(d.error || 'Could not update cart.', true); } })
+    .catch(function () { tkToast('Connection error.', true); });
+}
+
+function cartRemove(itemId) {
+  fetch('/api/cart.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'remove', item_id: parseInt(itemId) })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) { if (d.ok) { window.location.reload(); } else { tkToast(d.error || 'Could not remove item.', true); } })
+    .catch(function () { tkToast('Connection error.', true); });
+}
+
+/* ── Mobile nav submenu toggle (inline onclick) ─────────────── */
+function toggleMobileSub(btn) {
+  var sub = btn.nextElementSibling;
+  if (!sub) return;
+  var open = sub.style.display === 'block';
+  sub.style.display = open ? 'none' : 'block';
+  btn.classList.toggle('open', !open);
+}
+
+/* ── Newsletter signup (inline onsubmit) ────────────────────── */
+function newsletterSignup(e) {
+  e.preventDefault();
+  var form = e.target;
+  var input = form.querySelector('input[type=email]');
+  var email = input ? input.value.trim() : '';
+  if (!email) { tkToast('Please enter your email.', true); return; }
+  fetch('/api/newsletter.php', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email })
+  })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.ok) { tkToast(d.message || 'Subscribed!'); if (input) input.value = ''; }
+      else { tkToast(d.error || 'Could not subscribe.', true); }
+    })
+    .catch(function () { tkToast('Connection error.', true); });
+}
+
+/* ── Currency switcher ──────────────────────────────────────── */
+function setCurrency(cur) {
+  document.cookie = 'cur=' + encodeURIComponent(cur) + ';path=/;max-age=' + (60 * 60 * 24 * 365);
+  window.location.reload();
+}
+document.addEventListener('DOMContentLoaded', function () {
+  document.querySelectorAll('[data-pref-cur]').forEach(function (btn) {
+    btn.addEventListener('click', function () { setCurrency(btn.getAttribute('data-pref-cur')); });
+  });
+});

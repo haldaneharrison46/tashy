@@ -27,6 +27,13 @@ CREATE TABLE IF NOT EXISTS users (
   created_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Newsletter subscribers ───────────────────────────────────
+CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+  id            INT UNSIGNED     AUTO_INCREMENT PRIMARY KEY,
+  email         VARCHAR(150)     NOT NULL UNIQUE,
+  created_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── PIN login throttle (brute-force protection) ──────────────
 CREATE TABLE IF NOT EXISTS pin_attempts (
   ip            VARCHAR(45)      PRIMARY KEY,

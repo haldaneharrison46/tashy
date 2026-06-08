@@ -49,15 +49,24 @@ function csrf_check(): void {
     }
 }
 
-// ── Currency formatting ───────────────────────────────────────
+// ── Currency ──────────────────────────────────────────────────
+// Prices are stored in JMD (base). Display converts using fixed rates
+// (edit rates here as needed — they are display-only; orders record JMD).
+function currency_config(): array {
+    return [
+        'jmd' => ['symbol' => 'J$',  'rate' => 1.0,    'label' => '🇯🇲 JMD'],
+        'usd' => ['symbol' => 'US$', 'rate' => 0.0064, 'label' => '🇺🇸 USD'],
+        'gbp' => ['symbol' => '£',   'rate' => 0.0050, 'label' => '🇬🇧 GBP'],
+        'eur' => ['symbol' => '€',   'rate' => 0.0059, 'label' => '🇪🇺 EUR'],
+    ];
+}
+function current_currency(): string {
+    $c = strtolower($_COOKIE['cur'] ?? 'jmd');
+    return array_key_exists($c, currency_config()) ? $c : 'jmd';
+}
 function money(float $amount): string {
-    // CURRENCY_SYMBOL can be clobbered by a hosting-injected constant of the
-    // same name (observed value "262145" on IONOS), and PHP's define() silently
-    // ignores our 'J$' once that exists. Fall back to the JMD symbol whenever
-    // the defined value isn't a sensible currency symbol.
-    $sym = (defined('CURRENCY_SYMBOL') && !ctype_digit((string) CURRENCY_SYMBOL))
-        ? CURRENCY_SYMBOL : 'J$';
-    return $sym . number_format($amount, 2);
+    $cfg = currency_config()[current_currency()];
+    return $cfg['symbol'] . number_format($amount * $cfg['rate'], 2);
 }
 
 // ── Slug generator ────────────────────────────────────────────

@@ -62,6 +62,17 @@ if ($tab === 'orders') {
     $orders = $stmt->fetchAll();
 }
 
+/* ── Wishlist / favourites ────────────────────────────────────── */
+$wishlist = [];
+if ($tab === 'wishlist') {
+    $stmt = db()->prepare(
+        'SELECT p.* FROM wishlist w JOIN products p ON p.id = w.product_id
+         WHERE w.user_id = ? AND p.active = 1 ORDER BY w.id DESC'
+    );
+    $stmt->execute([$user['id']]);
+    $wishlist = $stmt->fetchAll();
+}
+
 /* ── Single order detail ──────────────────────────────────────── */
 $orderDetail = null;
 $orderItems  = [];
@@ -109,6 +120,7 @@ require_once __DIR__ . '/includes/header.php';
       <nav class="account-nav">
         <a href="account.php?tab=profile"  class="<?= $tab==='profile'  ? 'active':'' ?>">👤 Profile</a>
         <a href="account.php?tab=orders"   class="<?= $tab==='orders'||$tab==='order' ? 'active':'' ?>">📦 Orders</a>
+        <a href="account.php?tab=wishlist" class="<?= $tab==='wishlist' ? 'active':'' ?>">❤️ Favourites</a>
         <a href="account.php?tab=security" class="<?= $tab==='security' ? 'active':'' ?>">🔒 Security</a>
         <div class="nav-divider"></div>
         <?php if ($user['role'] === 'admin'): ?>
@@ -203,6 +215,31 @@ require_once __DIR__ . '/includes/header.php';
               <?php endforeach; ?>
               </tbody>
             </table>
+          </div>
+        <?php endif; ?>
+
+        <?php elseif ($tab === 'wishlist'): ?>
+        <h2 style="margin-bottom:20px">My Favourites</h2>
+        <?php if (empty($wishlist)): ?>
+          <p style="color:#999">You haven't saved any favourites yet. <a href="shop.php" style="color:var(--rose-gold)">Browse the shop →</a> and tap the ♥ on any product.</p>
+        <?php else: ?>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:18px">
+            <?php foreach ($wishlist as $p): ?>
+            <div class="product-card" data-product-id="<?= $p['id'] ?>" style="position:relative">
+              <button class="fav-btn active" aria-label="Remove from wishlist" data-product-id="<?= $p['id'] ?>" onclick="toggleWishlist(this)" style="position:absolute;top:8px;right:8px;z-index:2">❤️</button>
+              <a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>">
+                <div class="product-card-img">
+                  <img src="<?= SITE_URL ?>/assets/images/<?= h($p['image'] ?: 'placeholder.svg') ?>" alt="<?= h($p['name']) ?>" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+                </div>
+              </a>
+              <div class="product-card-body" style="padding-top:10px">
+                <div class="product-brand" style="font-size:.78rem;color:#999"><?= h($p['brand']) ?></div>
+                <h3 class="product-name" style="font-size:.92rem;margin:2px 0 6px"><a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>" style="color:inherit;text-decoration:none"><?= h($p['name']) ?></a></h3>
+                <span class="price-current" style="font-weight:700"><?= money($p['price']) ?></span>
+                <button class="quick-add-btn btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="addToCart(<?= $p['id'] ?>, this)">Add to Cart</button>
+              </div>
+            </div>
+            <?php endforeach; ?>
           </div>
         <?php endif; ?>
 
