@@ -30,11 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Image: keep existing or use new value
     $data['image'] = trim($f['image'] ?? '');
     if (empty($data['image'])) $data['image'] = 'placeholder.jpg';
+    // Additional gallery images (optional)
+    $data['image2'] = trim($f['image2'] ?? '');
+    $data['image3'] = trim($f['image3'] ?? '');
 
     if (!empty($f['product_id'])) {
         // Update
         $pid = (int)$f['product_id'];
-        $sql = 'UPDATE products SET name=?,brand=?,category_id=?,description=?,price=?,compare_price=?,stock=?,sku=?,tags=?,active=?,featured=?,image=? WHERE id=?';
+        $sql = 'UPDATE products SET name=?,brand=?,category_id=?,description=?,price=?,compare_price=?,stock=?,sku=?,tags=?,active=?,featured=?,image=?,image2=?,image3=? WHERE id=?';
         $pdo->prepare($sql)->execute(array_merge(array_values($data), [$pid]));
         flash('success', 'Product updated.');
     } else {
@@ -47,8 +50,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $cnt++;
             $data['slug'] = $base . '-' . $cnt;
         }
-        $sql = 'INSERT INTO products (name,brand,category_id,description,price,compare_price,stock,sku,tags,active,featured,image,slug) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)';
-        $pdo->prepare($sql)->execute([$data['name'],$data['brand'],$data['category_id'],$data['description'],$data['price'],$data['compare_price'],$data['stock'],$data['sku'],$data['tags'],$data['active'],$data['featured'],$data['image'],$data['slug']]);
+        $sql = 'INSERT INTO products (name,brand,category_id,description,price,compare_price,stock,sku,tags,active,featured,image,image2,image3,slug) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)';
+        $pdo->prepare($sql)->execute([$data['name'],$data['brand'],$data['category_id'],$data['description'],$data['price'],$data['compare_price'],$data['stock'],$data['sku'],$data['tags'],$data['active'],$data['featured'],$data['image'],$data['image2'],$data['image3'],$data['slug']]);
         flash('success', 'Product added.');
     }
     redirect(SITE_URL . '/admin/products.php');
@@ -84,7 +87,7 @@ $products = $products->fetchAll();
 
 if ($action === 'add' || $editProduct) {
     // Show add/edit form
-    $p = $editProduct ?? ['name'=>'','brand'=>'','category_id'=>0,'description'=>'','price'=>'','compare_price'=>'','stock'=>0,'sku'=>'','tags'=>'','active'=>1,'featured'=>0,'image'=>''];
+    $p = $editProduct ?? ['name'=>'','brand'=>'','category_id'=>0,'description'=>'','price'=>'','compare_price'=>'','stock'=>0,'sku'=>'','tags'=>'','active'=>1,'featured'=>0,'image'=>'','image2'=>'','image3'=>''];
     $formTitle = $editProduct ? 'Edit Product' : 'Add New Product';
 ?>
 <div style="max-width:760px">
@@ -139,8 +142,16 @@ if ($action === 'add' || $editProduct) {
           <input type="text" name="tags" class="form-control" value="<?= h($p['tags']) ?>">
         </div>
         <div class="form-group full">
-          <label class="form-label">Image filename (in assets/images/)</label>
+          <label class="form-label">Main image filename (in assets/images/)</label>
           <input type="text" name="image" class="form-control" placeholder="e.g. shea-butter.jpg" value="<?= h($p['image']) ?>">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Image 2 (optional)</label>
+          <input type="text" name="image2" class="form-control" placeholder="e.g. shea-butter-2.jpg" value="<?= h($p['image2'] ?? '') ?>">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Image 3 (optional)</label>
+          <input type="text" name="image3" class="form-control" placeholder="e.g. shea-butter-3.jpg" value="<?= h($p['image3'] ?? '') ?>">
         </div>
         <div class="form-group full" style="display:flex;gap:24px">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
