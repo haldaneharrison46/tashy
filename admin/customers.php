@@ -1,4 +1,28 @@
 <?php
+require_once dirname(__DIR__) . '/includes/functions.php';
+require_once dirname(__DIR__) . '/includes/auth.php';
+require_admin();
+
+/* ── CSV export (must run before any HTML output) ── */
+if (($_GET['export'] ?? '') === 'csv') {
+    $rows = db()->query("SELECT u.name, u.email, u.phone, u.active, u.created_at,
+            (SELECT COUNT(*) FROM orders o WHERE o.user_id=u.id) oc,
+            (SELECT COALESCE(SUM(total),0) FROM orders o WHERE o.user_id=u.id AND o.status!='cancelled') spent,
+            (SELECT MAX(created_at) FROM orders o WHERE o.user_id=u.id) last_order
+        FROM users u WHERE u.role='customer' ORDER BY u.name")->fetchAll();
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="customers-' . date('Ymd') . '.csv"');
+    $out = fopen('php://output', 'w');
+    fputcsv($out, ['Name','Email','Phone','Orders','Lifetime Spend (JMD)','Last Order','Status','Joined']);
+    foreach ($rows as $r) {
+        fputcsv($out, [$r['name'], $r['email'], $r['phone'], (int)$r['oc'],
+            number_format((float)$r['spent'], 2, '.', ''), $r['last_order'],
+            $r['active'] ? 'Active' : 'Inactive', $r['created_at']]);
+    }
+    fclose($out);
+    exit;
+}
+
 $pageTitle = 'Customers';
 require_once __DIR__ . '/header.php';
 
@@ -190,7 +214,8 @@ $ok = flash('success'); $err = flash('error');
     <button type="submit" class="btn btn-outline btn-sm">Search</button>
     <?php if ($search): ?><a href="customers.php" class="btn btn-outline btn-sm">Clear</a><?php endif; ?>
   </form>
-  <a href="customers.php?action=add" class="btn btn-primary" style="margin-left:auto">+ Add Customer</a>
+  <a href="customers.php?export=csv" class="btn btn-outline" style="margin-left:auto">⬇ Export CSV</a>
+  <a href="customers.php?action=add" class="btn btn-primary">+ Add Customer</a>
 </div>
 
 <div class="admin-card" style="padding:0;overflow:hidden">

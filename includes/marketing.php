@@ -234,6 +234,16 @@ function marketing_publish(array $post): array {
     if (!empty($post['image'])) {
         $img = preg_match('~^https?://~i', $post['image']) ? $post['image'] : (SITE_URL . '/assets/images/' . $post['image']);
     }
+    // Fall back to the first featured product's image (so Facebook posts get a photo).
+    if ($img === '' && !empty($post['product_ids'])) {
+        $pid = (int) (explode(',', $post['product_ids'])[0] ?? 0);
+        if ($pid) {
+            $st = db()->prepare('SELECT image FROM products WHERE id = ?');
+            $st->execute([$pid]);
+            $pimg = $st->fetchColumn();
+            if ($pimg) $img = SITE_URL . '/assets/images/' . $pimg;
+        }
+    }
 
     $results = [];
     if (in_array('facebook', $platforms, true)) $results['facebook'] = publish_facebook($msg, $link, $img);

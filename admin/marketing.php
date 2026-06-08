@@ -164,6 +164,7 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
     </form>
   </div>
 
+  <div style="display:flex;flex-direction:column;gap:22px">
   <!-- AI assistant -->
   <div class="admin-card">
     <h2>✨ AI Ad Builder</h2>
@@ -193,9 +194,35 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
     <div id="aiOut" style="margin-top:14px"></div>
     <?php endif; ?>
   </div>
+
+  <!-- Live ad preview -->
+  <div class="admin-card">
+    <h2>Preview <span id="pvPlat" style="font-size:0.72rem;color:#888;font-weight:400"></span></h2>
+    <div style="border:1px solid var(--grey-light);border-radius:10px;overflow:hidden">
+      <div style="padding:8px 10px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--grey-light)">
+        <div style="width:28px;height:28px;border-radius:50%;background:var(--rose-gold)"></div>
+        <strong style="font-size:0.82rem"><?= h(SITE_NAME) ?></strong>
+      </div>
+      <img id="pvImg" alt="" style="width:100%;max-height:220px;object-fit:cover;display:none">
+      <div style="padding:10px">
+        <div id="pvBody" style="font-size:0.85rem;white-space:pre-wrap;color:#333">Your caption preview…</div>
+        <div id="pvTags" style="font-size:0.78rem;color:#1d4ed8;margin-top:6px"></div>
+      </div>
+    </div>
+  </div>
+  </div><!-- /right column -->
 </div>
 
 <script>
+function pvImgSrc(v) { return !v ? '' : (/^https?:\/\//i.test(v) ? v : '<?= SITE_URL ?>/assets/images/' + v); }
+function updatePreview() {
+  document.getElementById('pvBody').textContent = document.getElementById('mBody').value || 'Your caption preview…';
+  document.getElementById('pvTags').textContent = document.getElementById('mTags').value || '';
+  const img = document.getElementById('pvImg'), src = pvImgSrc(document.getElementById('mImage').value.trim());
+  if (src) { img.src = src; img.style.display = ''; } else { img.style.display = 'none'; }
+  const plat = document.getElementById('aiPlatform');
+  document.getElementById('pvPlat').textContent = plat ? ('· ' + plat.options[plat.selectedIndex].text) : '';
+}
 const CSRF = <?= json_encode(csrf_token()) ?>;
 const API  = '<?= SITE_URL ?>/api/marketing_ai.php';
 const checkedProductIds = () => [...document.querySelectorAll('.prodCb:checked')].map(c => c.value);
@@ -214,6 +241,7 @@ document.querySelectorAll('.prodCb').forEach(cb => cb.addEventListener('change',
   const img = document.getElementById('mImage');
   const first = document.querySelector('.prodCb:checked');
   if (img && !img.value && first && first.dataset.image) img.value = first.dataset.image;
+  updatePreview();
 }));
 
 async function callAI(payload, btn, busyText) {
@@ -242,6 +270,7 @@ if (sugBtn) sugBtn.addEventListener('click', async () => {
   const img = document.getElementById('mImage');
   const first = document.querySelector('.prodCb:checked');
   if (img && !img.value && first && first.dataset.image) img.value = first.dataset.image;
+  updatePreview();
 });
 
 const genBtn = document.getElementById('aiGen');
@@ -270,9 +299,14 @@ if (genBtn) genBtn.addEventListener('click', async () => {
     const img = document.getElementById('mImage');
     const first = document.querySelector('.prodCb:checked');
     if (img && !img.value && first && first.dataset.image) img.value = first.dataset.image;
+    updatePreview();
     window.scrollTo({top:0, behavior:'smooth'});
   }));
 });
+// Live preview bindings
+['mBody','mTags','mImage'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+(function(){ const pp = document.getElementById('aiPlatform'); if (pp) pp.addEventListener('change', updatePreview); })();
+updatePreview();
 </script>
 <?php require_once __DIR__ . '/footer.php'; exit; }
 

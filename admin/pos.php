@@ -209,9 +209,16 @@ $err = flash('error');
     <div style="margin-top:12px">
       <div class="tk-row"><span>Subtotal</span><span id="tkSubtotal">J$0.00</span></div>
       <div class="tk-row" style="align-items:center">
-        <span>Discount (J$)</span>
-        <input type="number" id="posDiscount" class="form-control" value="0" min="0" step="0.01" style="width:110px;text-align:right">
+        <span>Discount</span>
+        <span style="display:flex;gap:4px">
+          <select id="posDiscType" class="form-control" style="width:62px;padding:4px 6px">
+            <option value="flat">J$</option>
+            <option value="pct">%</option>
+          </select>
+          <input type="number" id="posDiscount" class="form-control" value="0" min="0" step="0.01" style="width:90px;text-align:right">
+        </span>
       </div>
+      <div class="tk-row" id="tkDiscRow" style="display:none;color:#c0392b"><span>Discount applied</span><span id="tkDisc">−J$0.00</span></div>
       <div class="tk-row">
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="posGct" checked> GCT (15%)</label>
         <span id="tkTax">J$0.00</span>
@@ -303,8 +310,13 @@ function renderTicket() {
 }
 function recalc() {
   const subtotal = cart.reduce((s,c) => s + c.price*c.qty, 0);
-  let discount = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const dv = parseFloat(document.getElementById('posDiscount').value) || 0;
+  const isPct = document.getElementById('posDiscType').value === 'pct';
+  let discount = isPct ? subtotal * Math.min(100, Math.max(0, dv)) / 100 : dv;
   discount = Math.max(0, Math.min(discount, subtotal));
+  const discRow = document.getElementById('tkDiscRow');
+  if (discount > 0) { discRow.style.display = ''; document.getElementById('tkDisc').textContent = '−' + money(discount); }
+  else discRow.style.display = 'none';
   const gct = document.getElementById('posGct').checked;
   const tax = gct ? (subtotal - discount) * TAX_RATE : 0;
   const total = subtotal - discount + tax;
@@ -316,7 +328,23 @@ function recalc() {
   document.getElementById('btnComplete').disabled = cart.length === 0;
   return {subtotal, discount, tax, total, tendered};
 }
-document.getElementById('posSearch').addEventListener('input', e => renderCards(e.target.value));
+// Search filter + barcode-scanner: scan a SKU then Enter to add the matching product.
+const posSearch = document.getElementById('posSearch');
+posSearch.addEventListener('input', e => renderCards(e.target.value));
+posSearch.addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const q = e.target.value.trim().toLowerCase();
+  if (!q) return;
+  let prod = PRODUCTS.find(p => (p.sku || '').toLowerCase() === q);
+  if (!prod) {
+    const m = PRODUCTS.filter(p => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)));
+    if (m.length === 1) prod = m[0];
+  }
+  if (prod && prod.stock > 0) { addItem(prod); e.target.value = ''; renderCards(''); }
+  e.target.focus();
+});
+document.getElementById('posDiscType').addEventListener('change', recalc);
 ['posDiscount','posGct','posTendered'].forEach(id => document.getElementById(id).addEventListener('input', recalc));
 document.getElementById('posPayment').addEventListener('change', e => {
   document.getElementById('cashRow').style.display = e.target.value === 'cash' ? '' : 'none';

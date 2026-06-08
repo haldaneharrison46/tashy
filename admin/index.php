@@ -12,6 +12,18 @@ $totalUsers    = $pdo->query("SELECT COUNT(*) FROM users WHERE role='customer'")
 $pendingOrders = $pdo->query("SELECT COUNT(*) FROM orders WHERE status='pending'")->fetchColumn();
 $lowStock      = $pdo->query("SELECT COUNT(*) FROM products WHERE stock <= 5 AND active=1")->fetchColumn();
 
+// Sales snapshot (revenue + order counts over time, and channel split)
+$NC = "status != 'cancelled'";  // exclude cancelled
+$salesToday   = $pdo->query("SELECT COALESCE(SUM(total),0) FROM orders WHERE $NC AND DATE(created_at)=CURDATE()")->fetchColumn();
+$ordToday     = $pdo->query("SELECT COUNT(*) FROM orders WHERE DATE(created_at)=CURDATE()")->fetchColumn();
+$salesWeek    = $pdo->query("SELECT COALESCE(SUM(total),0) FROM orders WHERE $NC AND created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)")->fetchColumn();
+$ordWeek      = $pdo->query("SELECT COUNT(*) FROM orders WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)")->fetchColumn();
+$salesMonth   = $pdo->query("SELECT COALESCE(SUM(total),0) FROM orders WHERE $NC AND created_at >= DATE_FORMAT(CURDATE(),'%Y-%m-01')")->fetchColumn();
+$ordMonth     = $pdo->query("SELECT COUNT(*) FROM orders WHERE created_at >= DATE_FORMAT(CURDATE(),'%Y-%m-01')")->fetchColumn();
+$posSales     = $pdo->query("SELECT COALESCE(SUM(total),0) FROM orders WHERE $NC AND channel='pos'")->fetchColumn();
+$onlineSales  = $pdo->query("SELECT COALESCE(SUM(total),0) FROM orders WHERE $NC AND channel<>'pos'")->fetchColumn();
+$chTotal      = max(1e-9, (float)$posSales + (float)$onlineSales);
+
 // Recent orders
 $recentOrders = $pdo->query("SELECT o.*, u.name as uname FROM orders o LEFT JOIN users u ON o.user_id=u.id ORDER BY o.created_at DESC LIMIT 8")->fetchAll();
 
@@ -49,6 +61,26 @@ $statusColors = ['pending'=>'warning','processing'=>'info','shipped'=>'info','de
   <div class="stat-card">
     <div class="stat-val" style="color:<?= $lowStock ? '#e74c3c' : 'var(--rose-gold)' ?>"><?= $lowStock ?></div>
     <div class="stat-lbl">Low Stock Items</div>
+  </div>
+</div>
+
+<div class="admin-card" style="margin-bottom:24px">
+  <h2>Sales Snapshot</h2>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px">
+    <div><div style="font-size:1.3rem;font-weight:700;color:var(--rose-gold)"><?= money($salesToday) ?></div>
+      <div style="font-size:0.78rem;color:#888">Today · <?= (int)$ordToday ?> order(s)</div></div>
+    <div><div style="font-size:1.3rem;font-weight:700;color:var(--rose-gold)"><?= money($salesWeek) ?></div>
+      <div style="font-size:0.78rem;color:#888">Last 7 days · <?= (int)$ordWeek ?> order(s)</div></div>
+    <div><div style="font-size:1.3rem;font-weight:700;color:var(--rose-gold)"><?= money($salesMonth) ?></div>
+      <div style="font-size:0.78rem;color:#888">This month · <?= (int)$ordMonth ?> order(s)</div></div>
+    <div style="min-width:200px">
+      <div style="font-size:0.82rem;display:flex;justify-content:space-between"><span>🛒 Online</span><strong><?= money($onlineSales) ?></strong></div>
+      <div style="font-size:0.82rem;display:flex;justify-content:space-between;margin-top:2px"><span>🧾 In-store (POS)</span><strong><?= money($posSales) ?></strong></div>
+      <div style="height:8px;border-radius:5px;overflow:hidden;background:#eee;margin-top:6px;display:flex">
+        <div style="width:<?= round((float)$onlineSales / $chTotal * 100) ?>%;background:var(--rose-gold)"></div>
+        <div style="width:<?= round((float)$posSales / $chTotal * 100) ?>%;background:#1d4ed8"></div>
+      </div>
+    </div>
   </div>
 </div>
 
