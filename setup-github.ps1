@@ -7,7 +7,7 @@
 
 $GH_USER    = "haldaneharrison46"
 $REPO_NAME  = "shanshan-beauty-supplies-php"
-$REPO_DESC  = "Tashy Kollections – PHP/MySQL e-commerce site for tashykollection.org"
+$REPO_DESC  = "Tashy Kollections – PHP/MySQL e-commerce site for tashykollections.com"
 $BRANCH     = "main"
 
 # ── Ask for PAT ──────────────────────────────────────────────
@@ -89,8 +89,8 @@ define('DB_PASS', 'your_db_password');
 
 // ── Site settings ───────────────────────────────────────────
 define('SITE_NAME',          'Tashy Kollections');
-define('SITE_URL',           'https://tashykollection.org');
-define('SITE_EMAIL',         'hello@tashykollection.org');
+define('SITE_URL',           'https://tashykollections.com');
+define('SITE_EMAIL',         'hello@tashykollections.com');
 define('CURRENCY',           'JMD');
 define('CURRENCY_SYMBOL',    'J$');
 define('TAX_RATE',           0.15);
@@ -155,7 +155,7 @@ Write-Host " SUCCESS! Repository is live at:" -ForegroundColor Green
 Write-Host "  https://github.com/$GH_USER/$REPO_NAME" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "NEXT STEPS — Deploy to IONOS (tashykollection.org):" -ForegroundColor Yellow
+Write-Host "NEXT STEPS — Deploy to IONOS (tashykollections.com):" -ForegroundColor Yellow
 Write-Host "1. Log in to IONOS Control Panel -> Hosting -> your domain"
 Write-Host "2. Go to  Git  (under 'Deployment')"
 Write-Host "3. Paste your repo URL: https://github.com/$GH_USER/$REPO_NAME"

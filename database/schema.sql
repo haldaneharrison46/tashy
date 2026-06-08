@@ -153,7 +153,7 @@ INSERT IGNORE INTO categories (id, name, slug, description, image, sort_order) V
 
 -- Admin user  (password: Admin1234!)
 INSERT IGNORE INTO users (id, name, email, password_hash, role) VALUES
-(1, 'Admin', 'admin@tashykollection.org',
+(1, 'Admin', 'admin@tashykollections.com',
  '$2y$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin');
 
 -- Sample products (home decor & fragrances)

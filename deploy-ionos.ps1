@@ -1,6 +1,6 @@
 # ============================================================
 #  Tashy Kollections — IONOS Deployment Script
-#  Uploads all PHP site files to tashykollection.org via SFTP
+#  Uploads all PHP site files to tashykollections.com via SFTP
 #
 #  BEFORE RUNNING:
 #  1. Fill in $SSH_HOST below (from IONOS panel → Hosting → FTP & SSH)
@@ -14,7 +14,7 @@ $SSH_HOST  = "access-5020587559.webspace-host.com"
 $SSH_USER  = "a1645260"
 $SSH_PASS  = "Shanshan123$"
 $SSH_PORT  = 22
-$REMOTE_DIR = "/var/www/vhosts/tashykollection.org/httpdocs"
+$REMOTE_DIR = "/var/www/vhosts/tashykollections.com/httpdocs"
 
 Write-Host ""
 Write-Host "=== Tashy Kollections — IONOS Deploy ===" -ForegroundColor Cyan
@@ -57,7 +57,7 @@ exit
         Write-Host ""
         Write-Host "====================================" -ForegroundColor Green
         Write-Host " Upload complete! Site is live at:" -ForegroundColor Green
-        Write-Host " https://tashykollection.org" -ForegroundColor Cyan
+        Write-Host " https://tashykollections.com" -ForegroundColor Cyan
         Write-Host "====================================" -ForegroundColor Green
     } else {
         Write-Host "Upload failed. Check deploy.log for details." -ForegroundColor Red
@@ -97,6 +97,6 @@ foreach ($file in $allFiles) {
 
 Write-Host ""
 Write-Host "Uploaded $uploaded files." -ForegroundColor Green
-Write-Host "Site should be live at https://tashykollection.org" -ForegroundColor Cyan
+Write-Host "Site should be live at https://tashykollections.com" -ForegroundColor Cyan
 Write-Host ""
 Write-Host "REMEMBER: Also upload config/db.php if not already on server." -ForegroundColor Yellow
