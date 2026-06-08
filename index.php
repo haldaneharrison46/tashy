@@ -118,10 +118,10 @@ require_once __DIR__ . '/includes/header.php';
     <div class="wholesale-banner">
       <div class="wholesale-banner-text">
         <h2>Discover your <span>signature scent</span></h2>
-        <p>Answer a few questions about your style in our Fragrance Lab, and we'll match you to scents made for you — for him, for her, and for your home.</p>
+        <p>Explore our curated fragrance collection — candles, diffusers and eau de parfum for him, for her, and for your home.</p>
       </div>
       <div class="wholesale-banner-cta">
-        <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary btn-lg">Explore Fragrances</a>
+        <a href="<?= SITE_URL ?>/shop.php?cat=fragrances" class="btn btn-primary btn-lg">Shop Fragrances</a>
       </div>
     </div>
   </div>
