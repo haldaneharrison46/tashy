@@ -1,27 +1,33 @@
 # IONOS Deploy Now — deployment config for the "tashy" project.
 # Schema: https://docs.ionos.space/docs/deployment-configuration/
 #
-# The PHP site is served from the repository root (DEPLOYMENT_FOLDER: ./).
-# These excludes keep dev tooling out of the webroot and, importantly,
-# preserve the server-side config/db.php (which holds DB credentials and
-# is gitignored, so it is never in the deployment artifact) across
-# recurring deploys.
+# The build's artifact-action copies this file to .deploy-now/config.yaml
+# inside the deployment artifact, where the deploy action parses it. That
+# parser requires `version: '1.0'` and reads excludes/commands from under
+# the `deploy:` key — top-level `bootstrap:`/`recurring:` keys are ignored.
+#
+# The PHP site is served from the repository root. These excludes keep dev
+# tooling out of the webroot and, on recurring deploys, preserve the
+# server-side config/db.php (DB credentials, gitignored so never in the
+# artifact) so it is not removed.
+version: '1.0'
 
-bootstrap:
-  excludes:
-    - .git
-    - .github
-    - .deploy-now
-    - deploy-ionos.ps1
-    - setup-github.ps1
-    - deploy.log
+deploy:
+  bootstrap:
+    excludes:
+      - .git
+      - .github
+      - .deploy-now
+      - deploy-ionos.ps1
+      - setup-github.ps1
+      - deploy.log
 
-recurring:
-  excludes:
-    - .git
-    - .github
-    - .deploy-now
-    - deploy-ionos.ps1
-    - setup-github.ps1
-    - deploy.log
-    - config/db.php
+  recurring:
+    excludes:
+      - .git
+      - .github
+      - .deploy-now
+      - deploy-ionos.ps1
+      - setup-github.ps1
+      - deploy.log
+      - config/db.php
