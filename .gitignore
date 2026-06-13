@@ -2,6 +2,9 @@
 config/db.php
 .env
 
+# Local dev (Docker preview stack — not deployed)
+_localdev/
+
 # PHP
 *.log
 /vendor/
