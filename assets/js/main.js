@@ -30,6 +30,14 @@
   }
 })();
 
+/* ── Base path (sub-folder aware) ─────────────────────────────────────────
+   window.TK_BASE is injected by PHP (see includes/footer.php) and equals the
+   path SITE_URL is served from — '' at the web root, '/tashy' in a sub-folder.
+   tkUrl() prefixes it so fetch()/redirect paths resolve wherever the site is
+   installed. */
+var TK_BASE = (typeof window !== 'undefined' && window.TK_BASE) ? window.TK_BASE : '';
+function tkUrl(path) { return TK_BASE + path; }
+
 /* ── DOMContentLoaded ─────────────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -148,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function () {
       btn.disabled = true;
       btn.textContent = 'Adding…';
 
-      fetch('/api/cart.php', {
+      fetch(tkUrl('/api/cart.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'add', product_id: parseInt(pid), quantity: qty })
@@ -179,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function () {
   function reloadCartDrawer() {
     var drawer = document.getElementById('cartDrawer');
     if (!drawer) return;
-    fetch('/api/cart.php')
+    fetch(tkUrl('/api/cart.php'))
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data.ok) return;
@@ -195,7 +203,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       var pid = btn.dataset.wishlist;
-      fetch('/api/wishlist.php', {
+      fetch(tkUrl('/api/wishlist.php'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ product_id: parseInt(pid) })
@@ -208,7 +216,7 @@ document.addEventListener('DOMContentLoaded', function () {
             btn.title = added ? 'Remove from wishlist' : 'Add to wishlist';
             showToast(added ? 'Added to wishlist!' : 'Removed from wishlist.');
           } else if (data.login) {
-            window.location.href = '/login.php?next=' + encodeURIComponent(window.location.pathname);
+            window.location.href = tkUrl('/login.php?next=' + encodeURIComponent(window.location.pathname));
           } else {
             showToast(data.error || 'Error.', true);
           }
@@ -227,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function () {
       var q = searchInput.value.trim();
       if (q.length < 2) { searchResults.style.display = 'none'; return; }
       searchTimer = setTimeout(function () {
-        fetch('/api/search.php?q=' + encodeURIComponent(q) + '&limit=6')
+        fetch(tkUrl('/api/search.php?q=' + encodeURIComponent(q) + '&limit=6'))
           .then(function (r) { return r.json(); })
           .then(function (data) {
             if (!data.ok || !data.results.length) { searchResults.style.display = 'none'; return; }
@@ -338,7 +346,7 @@ function addToCart(productId, btn, qty) {
   qty = parseInt(qty) || 1;
   var orig = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Adding…'; }
-  fetch('/api/cart.php', {
+  fetch(tkUrl('/api/cart.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'add', product_id: parseInt(productId), quantity: qty })
@@ -354,7 +362,7 @@ function addToCart(productId, btn, qty) {
 
 function toggleWishlist(btn) {
   var pid = btn.getAttribute('data-product-id');
-  fetch('/api/wishlist.php', {
+  fetch(tkUrl('/api/wishlist.php'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ product_id: parseInt(pid) })
@@ -367,7 +375,7 @@ function toggleWishlist(btn) {
         btn.setAttribute('aria-label', added ? 'Remove from wishlist' : 'Add to wishlist');
         tkToast(added ? 'Added to wishlist!' : 'Removed from wishlist.');
       } else if (d.login) {
-        window.location.href = '/login.php?next=' + encodeURIComponent(window.location.pathname + window.location.search);
+        window.location.href = tkUrl('/login.php?next=' + encodeURIComponent(window.location.pathname + window.location.search));
       } else {
         tkToast(d.error || 'Error.', true);
       }
@@ -378,7 +386,7 @@ function toggleWishlist(btn) {
 /* ── Cart drawer quantity / remove (inline onclick) ─────────── */
 function cartQty(itemId, newQty) {
   if (newQty < 1) { cartRemove(itemId); return; }
-  fetch('/api/cart.php', {
+  fetch(tkUrl('/api/cart.php'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'update', item_id: parseInt(itemId), quantity: parseInt(newQty) })
   })
@@ -388,7 +396,7 @@ function cartQty(itemId, newQty) {
 }
 
 function cartRemove(itemId) {
-  fetch('/api/cart.php', {
+  fetch(tkUrl('/api/cart.php'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'remove', item_id: parseInt(itemId) })
   })
@@ -413,7 +421,7 @@ function newsletterSignup(e) {
   var input = form.querySelector('input[type=email]');
   var email = input ? input.value.trim() : '';
   if (!email) { tkToast('Please enter your email.', true); return; }
-  fetch('/api/newsletter.php', {
+  fetch(tkUrl('/api/newsletter.php'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email })
   })

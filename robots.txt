@@ -1,9 +1,0 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /api/
-Disallow: /config/
-Disallow: /includes/
-Disallow: /database/
-
-Sitemap: http://tashykollections.org/sitemap.xml

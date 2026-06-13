@@ -10,7 +10,7 @@ DirectoryIndex index.php
 </IfModule>
 
 # ── Hide sensitive files ──────────────────────────
-<FilesMatch "\.(env|sql|log|bak|sh|git)$">
+<FilesMatch "\.(env|sql|log|bak|sh|ps1|git)$">
   Require all denied
 </FilesMatch>
 <FilesMatch "^(composer\.(json|lock)|package\.json|package-lock\.json)$">
@@ -20,10 +20,13 @@ DirectoryIndex index.php
 # ── Block direct access to includes/config/database ──
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteBase /
+  # No RewriteBase: rules use relative substitutions and per-directory
+  # context, so they work whether this .htaccess sits at the web root
+  # (tashykollections.com) or in a sub-folder (…/tashy on the .online domain).
 
-  # XML sitemap served by PHP
+  # XML sitemap & robots served by PHP (base-path aware)
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
+  RewriteRule ^robots\.txt$ robots.php [L]
 
   # Block direct PHP includes access
   RewriteRule ^includes/       - [F,L]

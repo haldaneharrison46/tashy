@@ -19,6 +19,7 @@ deploy:
       - .github
       - .deploy-now
       - deploy-ionos.ps1
+      - deploy-tashy.ps1
       - setup-github.ps1
       - deploy.log
 
@@ -28,6 +29,7 @@ deploy:
       - .github
       - .deploy-now
       - deploy-ionos.ps1
+      - deploy-tashy.ps1
       - setup-github.ps1
       - deploy.log
       - config/db.php

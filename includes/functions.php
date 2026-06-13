@@ -10,6 +10,26 @@ if (!defined('SITE_ADDRESS')) {
     define('SITE_ADDRESS', '37 Cornwall Street, Falmouth, Trelawny, Jamaica');
 }
 
+// ── Base URL path (sub-folder aware) ──────────────────────────
+// Returns the path component of SITE_URL, e.g. '/tashy' when the site is
+// served from a sub-folder, or '' at the web root. PHP links already use
+// the absolute SITE_URL; this exists so client-side JS (window.TK_BASE)
+// can prefix its fetch()/redirect paths to match the install location.
+function base_path(): string {
+    return rtrim((string)(parse_url(SITE_URL, PHP_URL_PATH) ?? ''), '/');
+}
+
+// Scheme + host (+ port) of SITE_URL, without the base path. Use this with
+// REQUEST_URI (which is already host-absolute, e.g. /tashy/shop.php) to build
+// canonical/OG URLs — concatenating SITE_URL directly would double the
+// sub-folder (…/tashy/tashy/…).
+function site_origin(): string {
+    $u = parse_url(SITE_URL);
+    $origin = ($u['scheme'] ?? 'https') . '://' . ($u['host'] ?? '');
+    if (!empty($u['port'])) $origin .= ':' . $u['port'];
+    return $origin;
+}
+
 // ── Output escaping ───────────────────────────────────────────
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

@@ -23,7 +23,7 @@ $_bodyClass = $bodyClass ?? '';
     $_desc  = $metaDesc ?? 'Home décor, bedding, mats & fragrances — Tashy Kollections, Falmouth, Jamaica.';
     $_ogImg = $ogImage ?? (SITE_URL . '/assets/images/hero-home.jpg');
     $_ogType= $ogType ?? 'website';
-    $_canon = SITE_URL . ($_SERVER['REQUEST_URI'] ?? '/');
+    $_canon = site_origin() . ($_SERVER['REQUEST_URI'] ?? '/');
   ?>
   <meta name="description" content="<?= h($_desc) ?>">
   <link rel="canonical" href="<?= h($_canon) ?>">
