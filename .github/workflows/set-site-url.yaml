@@ -71,6 +71,7 @@ jobs:
             echo "    DNS AAAA: $(getent ahostsv6 $D | awk '{print $1}' | sort -u | tr '\n' ' ')"
             hc=$(curl -sSL -o /tmp/p.html -w '%{http_code}' --connect-timeout 15 "http://$D/" 2>/dev/null || echo 000)
             echo "    HTTP    : $hc  canonical=$(grep -oiE 'rel=\"canonical\" href=\"[^\"]*\"' /tmp/p.html | head -1)"
+            echo "    new code? css=$(grep -c 'href=\"assets/css/style.css\"' /tmp/p.html) skyTheme=$(grep -c 'Sky Blue' /tmp/p.html) logoSvg=$(grep -c 'aria-label=\"Tashy Kollections\"' /tmp/p.html) dbErr=$(grep -c 'Database connection failed' /tmp/p.html)"
             sc=$(curl -sSL -o /dev/null -w '%{http_code}' --connect-timeout 15 "https://$D/" 2>/tmp/se || echo 000)
             echo "    HTTPS   : $sc  $(head -1 /tmp/se 2>/dev/null)"
           done
