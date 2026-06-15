@@ -65,6 +65,10 @@ jobs:
           echo "  config/db.php SITE_URL on Deploy Now webspace: $($SSH "grep \"define('SITE_URL'\" config/db.php" 2>/dev/null)"
           echo "  Deploy Now webspace IP (home-5020640214) = $(getent ahostsv4 home-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
           echo "  (old webspace was 74.208.236.55)"
+          echo "  == MARKER test: is the webspace I can SSH to the one serving the domains? =="
+          for u in "http://tashykollections.com/tk-marker.txt" "http://tashykollections.com/shan/tk-marker.txt" "http://tashykollections.online/tk-marker.txt" "http://tashykollections.online/shan/tk-marker.txt" "http://access-5020587559.webspace-host.com/tk-marker.txt"; do
+            echo "    $u -> $(curl -s --connect-timeout 15 "$u" 2>/dev/null | head -1 | tr -d '\r' || echo NONE) [$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 15 "$u" 2>/dev/null)]"
+          done
           echo "  == are STATIC assets on 74.208.236.55 my NEW versions? =="
           echo "    style.css filter-title (new): $(curl -s -H 'Host: tashykollections.com' http://74.208.236.55/assets/css/style.css 2>/dev/null | grep -c 'filter-title')"
           echo "    main.js softpink theme (new): $(curl -s -H 'Host: tashykollections.com' http://74.208.236.55/assets/js/main.js 2>/dev/null | grep -c 'softpink')"
