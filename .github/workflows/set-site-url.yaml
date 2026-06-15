@@ -55,14 +55,19 @@ jobs:
           echo "== current config/db.php SITE_URL line =="
           $SSH "test -f config/db.php && grep -n \"define('SITE_URL'\" config/db.php || echo '(no config/db.php yet)'"
 
-          echo "== LIVE verify: $VERIFY_URL =="
-          echo "  DNS A record: $(getent hosts tashykollections.com | awk '{print $1}' | tr '\n' ' ')"
-          for u in "http://tashykollections.com/" "https://tashykollections.com/"; do
-            code=$(curl -sSL -o /tmp/p.html -w '%{http_code}' --connect-timeout 20 "$u" 2>/tmp/curlerr || echo 000)
-            echo "  [strict] $u -> HTTP=$code  $(head -1 /tmp/curlerr 2>/dev/null)"
-          done
-          echo "  [cert-ignored] https -> HTTP=$(curl -ksSL -o /tmp/p.html -w '%{http_code}' --connect-timeout 20 https://tashykollections.com/ 2>/dev/null)"
-          echo "  cert subject/dates:"; curl -kvsS https://tashykollections.com/ -o /dev/null 2>&1 | grep -iE 'subject:|issuer:|expire|CN=' | head -4 || true
+          echo "== LIVE verify =="
+          echo "  config/db.php SITE_URL on THIS (Deploy Now) webspace:"
+          $SSH "grep \"define('SITE_URL'\" config/db.php"
+          echo "  DNS: A=$(getent ahostsv4 tashykollections.com | awk '{print $1}' | sort -u | tr '\n' ' ') AAAA=$(getent ahostsv6 tashykollections.com | awk '{print $1}' | sort -u | tr '\n' ' ')"
+          echo "  -- http header/redirect chain --"
+          curl -sSIL --connect-timeout 20 http://tashykollections.com/ 2>&1 | grep -iE '^HTTP/|^location:|^server:' | head -10
+          echo "  -- effective URL after redirects --"
+          curl -sSL -o /tmp/p.html -w '  final=%{url_effective} HTTP=%{http_code}\n' --connect-timeout 20 http://tashykollections.com/ 2>/tmp/e || cat /tmp/e
+          echo "  canonical: $(grep -oiE '<link rel=\"canonical\" href=\"[^\"]*\"' /tmp/p.html | head -1)"
+          echo "  -- https handshake (cert-ignored) --"
+          curl -ksSI --connect-timeout 20 https://tashykollections.com/ 2>&1 | grep -iE '^HTTP/|^server:' | head -3 || true
+          echo "  -- new webspace staging PHP now? --"
+          echo "  staging /index.php -> $(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 20 https://home-5020640214.app-ionos.space/index.php 2>/dev/null)"
           echo "  DB error on page?   : $(grep -c 'Database connection failed' /tmp/p.html || true)"
           echo "  stylesheet present? : $(grep -c 'assets/css/style.css' /tmp/p.html || true)"
           echo "  images present?     : $(grep -c 'assets/images/' /tmp/p.html || true)"
