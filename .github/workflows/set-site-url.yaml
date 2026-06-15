@@ -43,6 +43,15 @@ jobs:
           echo "== whoami / pwd =="
           $SSH 'whoami; pwd'
 
+          echo "== htdocs listing =="
+          $SSH 'ls -la; echo "---"; ls -la config 2>/dev/null || echo "(no config dir)"'
+
+          echo "== is OUR code here? (asset_base marker + index head) =="
+          $SSH 'echo "index.php exists:"; ls -la index.php 2>/dev/null; echo "asset_base hits in includes/functions.php:"; grep -c "function asset_base" includes/functions.php 2>/dev/null; echo "asset_base hits in index.php:"; grep -c "asset_base" index.php 2>/dev/null'
+
+          echo "== find any db.php =="
+          $SSH 'find . -maxdepth 3 -name db.php 2>/dev/null; find "$HOME" -maxdepth 5 -name db.php 2>/dev/null | head'
+
           echo "== locate config/db.php =="
           # Resolve the config path: try common locations, fall back to find under the home dir.
           REMOTE_FIND='for p in config/db.php httpdocs/config/db.php /var/www/vhosts/tashykollections.com/httpdocs/config/db.php "$HOME/httpdocs/config/db.php"; do if [ -f "$p" ]; then echo "$p"; exit 0; fi; done; find "$HOME" -maxdepth 4 -path "*/config/db.php" 2>/dev/null | head -1'
