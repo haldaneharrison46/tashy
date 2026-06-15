@@ -56,10 +56,13 @@ jobs:
           $SSH "test -f config/db.php && grep -n \"define('SITE_URL'\" config/db.php || echo '(no config/db.php yet)'"
 
           echo "== LIVE verify: $VERIFY_URL =="
-          for u in "$VERIFY_URL/" "https://www.tashykollections.com/"; do
+          echo "  DNS A record: $(getent hosts tashykollections.com | awk '{print $1}' | tr '\n' ' ')"
+          for u in "http://tashykollections.com/" "https://tashykollections.com/"; do
             code=$(curl -sSL -o /tmp/p.html -w '%{http_code}' --connect-timeout 20 "$u" 2>/tmp/curlerr || echo 000)
-            echo "  $u -> HTTP=$code  $(cat /tmp/curlerr 2>/dev/null | head -1)"
+            echo "  [strict] $u -> HTTP=$code  $(head -1 /tmp/curlerr 2>/dev/null)"
           done
+          echo "  [cert-ignored] https -> HTTP=$(curl -ksSL -o /tmp/p.html -w '%{http_code}' --connect-timeout 20 https://tashykollections.com/ 2>/dev/null)"
+          echo "  cert subject/dates:"; curl -kvsS https://tashykollections.com/ -o /dev/null 2>&1 | grep -iE 'subject:|issuer:|expire|CN=' | head -4 || true
           echo "  DB error on page?   : $(grep -c 'Database connection failed' /tmp/p.html || true)"
           echo "  stylesheet present? : $(grep -c 'assets/css/style.css' /tmp/p.html || true)"
           echo "  images present?     : $(grep -c 'assets/images/' /tmp/p.html || true)"
