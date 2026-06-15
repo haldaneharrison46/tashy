@@ -20,6 +20,21 @@
       '--black': '#322a2c', '--black-soft': '#433639', '--rose-gold': '#bd7d82', '--rose-light': '#d6a0a4',
       '--rose-pale': '#f8ebe9', '--gold-accent': '#c99a6a', '--off-white': '#faf4f3', '--white': '#ffffff',
       '--grey-light': '#f0e5e3', '--grey-dark': '#5d5052', '--grey-mid': '#9c8d8f'
+    },
+    sky: {
+      '--black': '#22303c', '--black-soft': '#324350', '--rose-gold': '#3f8fd0', '--rose-light': '#6fa9dc',
+      '--rose-pale': '#e7f1fb', '--gold-accent': '#3f8fd0', '--off-white': '#f3f8fd', '--white': '#ffffff',
+      '--grey-light': '#e2edf6', '--grey-dark': '#48535d', '--grey-mid': '#8494a2'
+    },
+    softpink: {
+      '--black': '#3a2d33', '--black-soft': '#4b3a41', '--rose-gold': '#d27d9c', '--rose-light': '#e3a6bd',
+      '--rose-pale': '#fdeef4', '--gold-accent': '#d27d9c', '--off-white': '#fdf6f9', '--white': '#ffffff',
+      '--grey-light': '#f4e6ec', '--grey-dark': '#5e5054', '--grey-mid': '#a08e96'
+    },
+    white: {
+      '--black': '#1a1a1a', '--black-soft': '#2b2b2b', '--rose-gold': '#5b5b5b', '--rose-light': '#7a7a7a',
+      '--rose-pale': '#f1f1f1', '--gold-accent': '#5b5b5b', '--off-white': '#ffffff', '--white': '#ffffff',
+      '--grey-light': '#ededed', '--grey-dark': '#444444', '--grey-mid': '#8a8a8a'
     }
   };
   var t = localStorage.getItem('sb-theme');
@@ -57,6 +72,21 @@ document.addEventListener('DOMContentLoaded', function () {
       '--black': '#322a2c', '--black-soft': '#433639', '--rose-gold': '#bd7d82', '--rose-light': '#d6a0a4',
       '--rose-pale': '#f8ebe9', '--gold-accent': '#c99a6a', '--off-white': '#faf4f3', '--white': '#ffffff',
       '--grey-light': '#f0e5e3', '--grey-dark': '#5d5052', '--grey-mid': '#9c8d8f'
+    },
+    sky: {
+      '--black': '#22303c', '--black-soft': '#324350', '--rose-gold': '#3f8fd0', '--rose-light': '#6fa9dc',
+      '--rose-pale': '#e7f1fb', '--gold-accent': '#3f8fd0', '--off-white': '#f3f8fd', '--white': '#ffffff',
+      '--grey-light': '#e2edf6', '--grey-dark': '#48535d', '--grey-mid': '#8494a2'
+    },
+    softpink: {
+      '--black': '#3a2d33', '--black-soft': '#4b3a41', '--rose-gold': '#d27d9c', '--rose-light': '#e3a6bd',
+      '--rose-pale': '#fdeef4', '--gold-accent': '#d27d9c', '--off-white': '#fdf6f9', '--white': '#ffffff',
+      '--grey-light': '#f4e6ec', '--grey-dark': '#5e5054', '--grey-mid': '#a08e96'
+    },
+    white: {
+      '--black': '#1a1a1a', '--black-soft': '#2b2b2b', '--rose-gold': '#5b5b5b', '--rose-light': '#7a7a7a',
+      '--rose-pale': '#f1f1f1', '--gold-accent': '#5b5b5b', '--off-white': '#ffffff', '--white': '#ffffff',
+      '--grey-light': '#ededed', '--grey-dark': '#444444', '--grey-mid': '#8a8a8a'
     }
   };
   var ALL_THEME_PROPS = [

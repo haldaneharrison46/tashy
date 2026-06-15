@@ -120,7 +120,7 @@ body { display:flex; min-height:100vh; flex-direction:column; }
 
   <!-- Sidebar -->
   <aside class="admin-sidebar">
-    <a href="<?= asset_base() ?>/admin/index.php" class="brand">⚡ <?= SITE_NAME ?><br><span style="font-size:0.7rem;font-weight:400;color:#777">Admin Panel</span></a>
+    <a href="<?= asset_base() ?>/admin/index.php" class="brand" style="color:#fff"><?= tk_logo(170) ?><span style="display:block;font-size:0.7rem;font-weight:400;color:#777;margin-top:4px">Admin Panel</span></a>
     <nav>
       <div class="section-label">Main</div>
       <a href="index.php"    class="<?= $currentPage==='index.php'    ? 'active':'' ?>"><span class="icon">📊</span> Dashboard</a>

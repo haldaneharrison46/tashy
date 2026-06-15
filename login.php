@@ -24,6 +24,7 @@ require_once __DIR__ . '/includes/header.php';
 <div class="auth-page section">
   <div class="container" style="max-width:440px">
     <div class="auth-card" style="background:var(--white);border:1px solid var(--grey-light);border-radius:16px;padding:40px">
+      <div style="text-align:center;margin-bottom:22px"><?= tk_logo(200) ?></div>
       <h1 style="font-size:1.6rem;margin-bottom:6px">Sign In</h1>
       <p style="color:#888;margin-bottom:28px">Welcome back to Tashy Kollections.</p>
 

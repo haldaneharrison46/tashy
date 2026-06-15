@@ -51,6 +51,23 @@ function asset_base(): string {
     return $base = base_path();
 }
 
+// ── Brand logo (reusable SVG) ─────────────────────────────────
+// Returns the Tashy Kollections logo as inline SVG, scaled to $width.
+// The wordmark "Tashy" uses currentColor so it adapts to its context (dark
+// admin sidebar, light header, etc.); the emblem + "KOLLECTIONS" stay rose-gold.
+function tk_logo(int $width = 250, string $class = 'logo-svg'): string {
+    $h = (int) round($width * 44 / 250);
+    return '<svg class="' . h($class) . '" width="' . $width . '" height="' . $h . '" viewBox="0 0 250 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tashy Kollections">'
+        . '<circle cx="22" cy="22" r="20" fill="none" stroke="#c9956c" stroke-width="1.4"/>'
+        . '<circle cx="22" cy="22" r="16.4" fill="none" stroke="#c9956c" stroke-width="0.7" opacity="0.55"/>'
+        . '<text x="22" y="30" text-anchor="middle" font-family="\'Playfair Display\', Georgia, serif" font-size="22" font-weight="700" fill="currentColor">T</text>'
+        . '<path d="M13 34 q9 3.6 18 0" fill="none" stroke="#c9956c" stroke-width="1" stroke-linecap="round"/>'
+        . '<circle cx="22" cy="4.6" r="1.1" fill="#c9956c"/>'
+        . '<text x="52" y="28" font-family="\'Playfair Display\', Georgia, serif" font-size="25" font-weight="700" fill="currentColor">Tashy</text>'
+        . '<text x="53" y="40" font-family="\'Inter\', Arial, sans-serif" font-size="9" font-weight="600" fill="#c9956c" letter-spacing="0.24em">KOLLECTIONS</text>'
+        . '</svg>';
+}
+
 // ── Output escaping ───────────────────────────────────────────
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');

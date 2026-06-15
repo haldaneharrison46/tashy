@@ -106,7 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <div class="admin-login">
-    <span class="brand">⚡ <?= h(SITE_NAME) ?></span>
+    <span class="brand" style="color:#2b2b2b"><?= tk_logo(185) ?></span>
     <h1>Admin Sign In</h1>
     <p class="sub">Staff access only.</p>
     <?php if ($error): ?><div class="err"><?= h($error) ?></div><?php endif; ?>

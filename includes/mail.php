@@ -6,7 +6,7 @@
 // ============================================================
 
 function tk_mail(string $to, string $subject, string $html): bool {
-    $from = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.org';
+    $from = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.com';
     $name = defined('SITE_NAME') ? SITE_NAME : 'Tashy Kollections';
     $headers = implode("\r\n", [
         'MIME-Version: 1.0',
@@ -73,7 +73,7 @@ function send_order_emails(array $o, array $items): void {
         );
     }
     // Store alert
-    $admin = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.org';
+    $admin = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.com';
     tk_mail(
         $admin,
         'New order ' . $o['order_number'] . ' — ' . $o['ship_name'],

@@ -863,12 +863,23 @@ p  { font-size: 1rem; color: var(--grey-dark); }
 .sort-select:focus { border-color: var(--rose-gold); }
 
 .active-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+/* Category side-panel heading — larger, nicer */
+.filter-title {
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--rose-pale);
+}
+.filter-sidebar .filter-group { margin-bottom: 28px; }
 .filter-tag {
   background: var(--rose-pale);
   color: var(--rose-gold);
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
-  padding: 5px 12px;
+  padding: 6px 13px;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -876,6 +887,17 @@ p  { font-size: 1rem; color: var(--grey-dark); }
   cursor: pointer;
 }
 .filter-tag:hover { background: var(--rose-gold); color: var(--white); }
+/* Sidebar category/sort links: bigger, comfortable, left-aligned list */
+.filter-sidebar .filter-tag {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 10px 16px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  justify-content: flex-start;
+  transition: background var(--transition), color var(--transition);
+}
+.filter-sidebar .filter-tag.active { background: var(--rose-gold); color: var(--white); }
 
 /* ---------- PDP (Product Detail Page) ---------- */
 .pdp-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 56px; align-items: start; }

@@ -89,7 +89,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
                                 ->execute([$custPhone, $custAddr, $existId]);
                             $custId = (int)$existId;
                         } else {
-                            $email = $custEmail !== '' ? $custEmail : ('pos+' . substr(md5($custName . microtime()), 0, 8) . '@tashykollections.org');
+                            $email = $custEmail !== '' ? $custEmail : ('pos+' . substr(md5($custName . microtime()), 0, 8) . '@tashykollections.com');
                             $pdo->prepare("INSERT INTO users (name, email, phone, address, password_hash, role) VALUES (?,?,?,?,?,?)")
                                 ->execute([$custName, $email, $custPhone ?: null, $custAddr ?: null, password_hash(bin2hex(random_bytes(6)), PASSWORD_BCRYPT, ['cost' => 12]), 'customer']);
                             $custId = (int)$pdo->lastInsertId();

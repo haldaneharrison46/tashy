@@ -1,7 +1,7 @@
 <?php
 // cron/publish_due.php — publish marketing posts whose scheduled time has passed.
 // Add to IONOS cron (e.g. every 5 min):  /usr/bin/php8.2-cli /path/to/cron/publish_due.php
-// Or hit via URL with the token:  https://tashykollections.org/cron/publish_due.php?key=shancron2026
+// Or hit via URL with the token:  https://tashykollections.com/cron/publish_due.php?key=shancron2026
 require_once __DIR__ . '/../includes/marketing.php';
 
 if (PHP_SAPI !== 'cli' && ($_GET['key'] ?? '') !== 'shancron2026') {

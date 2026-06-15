@@ -154,6 +154,9 @@ $_bodyClass = $bodyClass ?? '';
             <button class="theme-opt" data-theme-key="sandstone" role="menuitem"><span class="theme-dot" style="background:#b27a4f"></span> Sandstone</button>
             <button class="theme-opt" data-theme-key="sage" role="menuitem"><span class="theme-dot" style="background:#6f8463"></span> Sage</button>
             <button class="theme-opt" data-theme-key="blush" role="menuitem"><span class="theme-dot" style="background:#bd7d82"></span> Blush</button>
+            <button class="theme-opt" data-theme-key="sky" role="menuitem"><span class="theme-dot" style="background:#3f8fd0"></span> Sky Blue</button>
+            <button class="theme-opt" data-theme-key="softpink" role="menuitem"><span class="theme-dot" style="background:#d27d9c"></span> Subtle Pink</button>
+            <button class="theme-opt" data-theme-key="white" role="menuitem"><span class="theme-dot" style="background:#ffffff"></span> White</button>
           </div>
         </div>
 
@@ -209,6 +212,9 @@ $_bodyClass = $bodyClass ?? '';
       <span class="theme-dot" data-theme-key="sandstone" title="Sandstone"    style="background:#b27a4f"></span>
       <span class="theme-dot" data-theme-key="sage"      title="Sage"         style="background:#6f8463"></span>
       <span class="theme-dot" data-theme-key="blush"     title="Blush"        style="background:#bd7d82"></span>
+      <span class="theme-dot" data-theme-key="sky"       title="Sky Blue"     style="background:#3f8fd0"></span>
+      <span class="theme-dot" data-theme-key="softpink"  title="Subtle Pink" style="background:#d27d9c"></span>
+      <span class="theme-dot" data-theme-key="white"     title="White"        style="background:#ffffff"></span>
     </div>
   </div>
   <ul>

@@ -13,7 +13,7 @@ $tkPhoneIntl = '+18764870686';   // tel: / sms:  (E.164)
 $tkPhoneWa   = '18764870686';    // wa.me        (digits only, no +)
 $tkPhoneShow = '+1 (876) 487-0686';
 $tkWaText    = rawurlencode('Hi Tashy Kollections! I have a question.');
-$tkEmail     = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.org';
+$tkEmail     = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.com';
 $tidioKey    = defined('TIDIO_KEY') ? trim((string) TIDIO_KEY) : '';
 ?>
 <style>
