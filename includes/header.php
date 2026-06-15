@@ -48,7 +48,7 @@ $_bodyClass = $bodyClass ?? '';
   <!-- Document-relative (not SITE_URL-absolute) so the stylesheet always loads from the
        same origin the page is served from — robust to SITE_URL host/path misconfig and
        works at the web root or in a /tashy sub-folder. All public pages are flat at root. -->
-  <link rel="stylesheet" href="assets/css/style.css">
+  <link rel="stylesheet" href="assets/css/style.css?v=<?= @filemtime(__DIR__ . '/../assets/css/style.css') ?: '1' ?>">
 </head>
 <body class="<?= h($_bodyClass) ?>">
 

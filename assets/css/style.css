@@ -863,17 +863,29 @@ p  { font-size: 1rem; color: var(--grey-dark); }
 .sort-select:focus { border-color: var(--rose-gold); }
 
 .active-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-/* Category side-panel heading — larger, nicer */
-.filter-title {
+/* Category Filter side panel */
+.filter-sidebar .filter-card { padding: 24px 22px; }
+.filter-panel-title {
   font-family: var(--font-heading);
-  font-size: 1.15rem;
-  font-weight: 700;
+  font-size: 1.45rem;
+  font-weight: 800;
   color: var(--black);
-  margin-bottom: 14px;
-  padding-bottom: 10px;
-  border-bottom: 2px solid var(--rose-pale);
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid var(--rose-gold);
 }
-.filter-sidebar .filter-group { margin-bottom: 28px; }
+/* Sub-section labels (Shop by Category / Sort By) */
+.filter-title {
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--grey-mid);
+  margin-bottom: 12px;
+}
+.filter-sidebar .filter-group { margin-bottom: 26px; }
+.filter-sidebar .filter-group:last-of-type { margin-bottom: 16px; }
 .filter-tag {
   background: var(--rose-pale);
   color: var(--rose-gold);

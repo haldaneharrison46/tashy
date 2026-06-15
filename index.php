@@ -11,12 +11,12 @@ require_once __DIR__ . '/includes/header.php';
 <section class="hero-home" style="background-image:url('<?= asset_base() ?>/assets/images/hero-home.jpg')">
   <div class="container">
     <div class="hero-home-text">
-      <p class="hero-eyebrow">Falmouth · Trelawny · Jamaica</p>
-      <h1>Make a <span>statement</span> in every room</h1>
-      <p>Bedding, comforters, mats, kitchen &amp; bath essentials, and signature fragrances — curated to turn your house into a home that speaks for itself.</p>
+      <p class="hero-eyebrow">★ Free Island-Wide Delivery over J$5,000</p>
+      <h1>Upgrade Every Room. <span>Starting Today.</span></h1>
+      <p>Premium bedding, mats, bath essentials &amp; signature fragrances — curated to transform your space. Don't just decorate. <strong>Make a statement.</strong></p>
       <div class="hero-home-ctas">
-        <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary btn-lg">Shop Collections</a>
-        <a href="<?= asset_base() ?>/about.php" class="btn btn-outline-white btn-lg">Our Story</a>
+        <a href="<?= asset_base() ?>/shop.php?featured=1" class="btn btn-primary btn-lg">Shop Best Sellers</a>
+        <a href="<?= asset_base() ?>/shop.php?sort=new" class="btn btn-outline-white btn-lg">New Arrivals</a>
       </div>
       <div class="hero-home-proofs">
         <div class="hero-home-proof">

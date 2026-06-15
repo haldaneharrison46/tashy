@@ -51,23 +51,26 @@ require_once __DIR__ . '/includes/header.php';
 
       <!-- Sidebar filters -->
       <aside class="filter-sidebar">
+        <div class="filter-card">
+        <h3 class="filter-panel-title">Category Filter</h3>
         <div class="filter-group">
-          <h4 class="filter-title">Categories</h4>
-          <a href="<?= asset_base() ?>/shop.php" class="filter-tag <?= $catSlug === '' ? 'active' : '' ?>">All</a>
+          <h4 class="filter-title">Shop by Category</h4>
+          <a href="<?= asset_base() ?>/shop.php" class="filter-tag <?= $catSlug === '' ? 'active' : '' ?>">All Products</a>
           <?php foreach ($categories as $c): ?>
           <a href="<?= asset_base() ?>/shop.php?cat=<?= h($c['slug']) ?>" class="filter-tag <?= $catSlug === $c['slug'] ? 'active' : '' ?>"><?= h($c['name']) ?></a>
           <?php endforeach; ?>
         </div>
-        <div class="filter-group" style="margin-top:24px">
-          <h4 class="filter-title">Sort</h4>
+        <div class="filter-group">
+          <h4 class="filter-title">Sort By</h4>
           <?php $sorts = [''=>'Featured','new'=>'New Arrivals','price_asc'=>'Price: Low–High','price_desc'=>'Price: High–Low','name'=>'A–Z']; ?>
           <?php foreach ($sorts as $val => $label): ?>
           <a href="?<?= http_build_query(array_merge($_GET, ['sort' => $val, 'page' => 1])) ?>" class="filter-tag <?= $sort === $val ? 'active' : '' ?>"><?= $label ?></a>
           <?php endforeach; ?>
         </div>
         <?php if ($search || $catSlug || $sort || $featured): ?>
-        <div style="margin-top:20px"><a href="<?= asset_base() ?>/shop.php" class="btn btn-outline btn-sm">Clear Filters</a></div>
+        <div style="margin-top:6px"><a href="<?= asset_base() ?>/shop.php" class="btn btn-outline btn-sm">Clear Filters</a></div>
         <?php endif; ?>
+        </div>
       </aside>
 
       <!-- Product grid -->
