@@ -65,8 +65,11 @@ jobs:
           echo "  config/db.php SITE_URL on Deploy Now webspace: $($SSH "grep \"define('SITE_URL'\" config/db.php" 2>/dev/null)"
           echo "  Deploy Now webspace IP (home-5020640214) = $(getent ahostsv4 home-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
           echo "  (old webspace was 74.208.236.55)"
-          echo "  == .org folder =="
-          curl -s --connect-timeout 15 "http://tashykollections.org/tk-org.txt" 2>/dev/null | head -1
+          echo "  == HTTPS cert check (all domains) =="
+          for d in tashykollections.com www.tashykollections.com tashykollections.online www.tashykollections.online tashykollections.org; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 20 "https://$d/" 2>/tmp/se || echo 000)
+            echo "  https://$d -> $code  $(head -1 /tmp/se 2>/dev/null)"
+          done
           echo "  == .org catalog clone (full output) =="
           curl -sS --connect-timeout 60 --max-time 180 "http://tashykollections.org/org-clone.php?k=tkorg9931" 2>&1 | head -60
           echo "  == .org live check =="
