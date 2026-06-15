@@ -29,7 +29,7 @@ jobs:
       SSH_USER: ${{ secrets.IONOS_DEPLOYMENT_BD4FC25F_E6A4_41D5_A436_924D7AEFB14B_SSH_USERNAME }}
       SITE_URL: ${{ inputs.site_url }}
       APPLY: ${{ inputs.apply }}
-      VERIFY_URL: "https://home-5020640214.app-ionos.space"
+      VERIFY_URL: "https://tashykollections.com"
       TK_DB_HOST: ${{ secrets.TK_DB_HOST }}
       TK_DB_NAME: ${{ secrets.TK_DB_NAME }}
       TK_DB_USER: ${{ secrets.TK_DB_USER }}
@@ -55,7 +55,20 @@ jobs:
           echo "== current config/db.php SITE_URL line =="
           $SSH "test -f config/db.php && grep -n \"define('SITE_URL'\" config/db.php || echo '(no config/db.php yet)'"
 
-          if [ "$APPLY" != "true" ]; then echo "Inspect only. Re-run with apply=true to write."; exit 0; fi
+          echo "== LIVE verify: $VERIFY_URL =="
+          for u in "$VERIFY_URL/" "https://www.tashykollections.com/"; do
+            code=$(curl -sSL -o /tmp/p.html -w '%{http_code}' --connect-timeout 20 "$u" 2>/tmp/curlerr || echo 000)
+            echo "  $u -> HTTP=$code  $(cat /tmp/curlerr 2>/dev/null | head -1)"
+          done
+          echo "  DB error on page?   : $(grep -c 'Database connection failed' /tmp/p.html || true)"
+          echo "  stylesheet present? : $(grep -c 'assets/css/style.css' /tmp/p.html || true)"
+          echo "  images present?     : $(grep -c 'assets/images/' /tmp/p.html || true)"
+          echo "  canonical line      : $(grep -oiE '<link rel=\"canonical\" href=\"[^\"]*\"' /tmp/p.html | head -1)"
+          echo "  title line          : $(grep -oiE '<title>[^<]*</title>' /tmp/p.html | head -1)"
+          echo "  --- first 12 lines ---"
+          head -12 /tmp/p.html
+
+          if [ "$APPLY" != "true" ]; then echo "Verify only (no provisioning)."; exit 0; fi
 
           echo "== build config from template (creds masked) =="
           cp .github/deploy/db.php.tpl /tmp/db.php
