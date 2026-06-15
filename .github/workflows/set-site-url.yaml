@@ -1,11 +1,11 @@
-name: "Maintenance: Provision config / set SITE_URL on Deploy Now webspace"
+name: "Maintenance: Provision config on Deploy Now webspace"
 
 # One-off maintenance task for the Deploy Now webspace
 # (access-5020640214.app-ionos.space). Read-only by default; with apply=true it
-# ensures config/db.php exists (created from repo secrets, SITE_URL from input,
-# or its SITE_URL line updated if already present), syntax-checks it, then
-# curls the live default URL to confirm the page renders and the DB connects.
-# DB credentials come from secrets and are masked in logs.
+# writes config/db.php (built from .github/deploy/db.php.tpl with secrets +
+# SITE_URL substituted in), syntax-checks it, then curls the live default URL to
+# confirm the page renders and the DB connects. DB creds come from secrets and
+# are masked in logs.
 
 on:
   workflow_dispatch:
@@ -35,6 +35,8 @@ jobs:
       TK_DB_USER: ${{ secrets.TK_DB_USER }}
       TK_DB_PASS: ${{ secrets.TK_DB_PASS }}
     steps:
+      - uses: actions/checkout@v4
+
       - name: Set up SSH key
         run: |
           mkdir -p ~/.ssh
@@ -44,49 +46,22 @@ jobs:
       - name: Provision / verify
         run: |
           set -e
-          SSHOPTS="-i ~/.ssh/id_ionos -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=25"
+          SSHOPTS="-i $HOME/.ssh/id_ionos -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=25"
           SSH="ssh $SSHOPTS $SSH_USER@$SSH_HOST"
 
           echo "== whoami / pwd =="
           $SSH 'whoami; pwd'
 
-          echo "== current state of config/db.php (SITE_URL line only) =="
+          echo "== current config/db.php SITE_URL line =="
           $SSH "test -f config/db.php && grep -n \"define('SITE_URL'\" config/db.php || echo '(no config/db.php yet)'"
 
           if [ "$APPLY" != "true" ]; then echo "Inspect only. Re-run with apply=true to write."; exit 0; fi
 
-          echo "== building config/db.php locally (creds masked) =="
-          {
-            printf "<?php\n"
-            printf "define('DB_HOST',    '%s');\n" "$TK_DB_HOST"
-            printf "define('DB_NAME',    '%s');\n" "$TK_DB_NAME"
-            printf "define('DB_USER',    '%s');\n" "$TK_DB_USER"
-            printf "define('DB_PASS',    '%s');\n" "$TK_DB_PASS"
-            printf "define('DB_CHARSET', 'utf8mb4');\n"
-            printf "define('SITE_NAME',  'Tashy Kollections');\n"
-            printf "define('SITE_URL',   '%s');\n" "$SITE_URL"
-            printf "define('SITE_EMAIL', 'hello@tashykollections.com');\n"
-            printf "define('SITE_ADDRESS', '37 Cornwall Street, Falmouth, Trelawny, Jamaica');\n"
-            printf "define('CURRENCY',   'JMD');\n"
-            printf "define('CURRENCY_SYMBOL', 'J\$');\n"
-            printf "define('TAX_RATE',   0.15);\n"
-            printf "define('FREE_SHIPPING_THRESHOLD', 5000);\n"
-            cat <<'PHPEOF'
-function db(): PDO {
-    static $pdo = null;
-    if ($pdo === null) {
-        $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
-        $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false];
-        try { $pdo = new PDO($dsn, DB_USER, DB_PASS, $options); }
-        catch (PDOException $e) { die(json_encode(['error' => 'Database connection failed.'])); }
-    }
-    return $pdo;
-}
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
-PHPEOF
-          } > /tmp/db.php
+          echo "== build config from template (creds masked) =="
+          cp .github/deploy/db.php.tpl /tmp/db.php
+          sed -i "s#__DB_HOST__#${TK_DB_HOST}#; s#__DB_NAME__#${TK_DB_NAME}#; s#__DB_USER__#${TK_DB_USER}#; s#__DB_PASS__#${TK_DB_PASS}#; s#__SITE_URL__#${SITE_URL}#" /tmp/db.php
 
-          echo "== uploading to webspace (config/db.php) =="
+          echo "== upload to webspace =="
           $SSH 'mkdir -p config'
           scp $SSHOPTS /tmp/db.php "$SSH_USER@$SSH_HOST:config/db.php"
           rm -f /tmp/db.php
@@ -94,11 +69,11 @@ PHPEOF
           echo "== verify on server: SITE_URL line + php -l =="
           $SSH "grep -n \"define('SITE_URL'\" config/db.php; php -l config/db.php 2>&1 || echo 'php CLI unavailable'"
 
-          echo "== curl the live default URL to confirm render + DB =="
-          CODE=$(curl -s -o /tmp/page.html -w '%{http_code}' "$VERIFY_URL/index.php" || echo "000")
-          echo "HTTP: $CODE"
-          echo "DB error present? : $(grep -c 'Database connection failed' /tmp/page.html || true)"
-          echo "stylesheet link?  : $(grep -c 'assets/css/style.css' /tmp/page.html || true)"
-          echo "product/hero img? : $(grep -c 'assets/images/' /tmp/page.html || true)"
-          echo "--- first 25 lines of rendered HTML ---"
-          head -25 /tmp/page.html
+          echo "== curl live default URL =="
+          CODE=$(curl -s -o /tmp/page.html -w '%{http_code}' "$VERIFY_URL/index.php" || echo 000)
+          echo "HTTP_STATUS=$CODE"
+          echo "DB_ERROR_HITS=$(grep -c 'Database connection failed' /tmp/page.html || true)"
+          echo "STYLESHEET_HITS=$(grep -c 'assets/css/style.css' /tmp/page.html || true)"
+          echo "IMAGE_HITS=$(grep -c 'assets/images/' /tmp/page.html || true)"
+          echo "--- first 20 lines of rendered HTML ---"
+          head -20 /tmp/page.html
