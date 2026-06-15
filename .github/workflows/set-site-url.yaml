@@ -65,10 +65,11 @@ jobs:
           echo "  config/db.php SITE_URL on Deploy Now webspace: $($SSH "grep \"define('SITE_URL'\" config/db.php" 2>/dev/null)"
           echo "  Deploy Now webspace IP (home-5020640214) = $(getent ahostsv4 home-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
           echo "  (old webspace was 74.208.236.55)"
-          echo "  == HTTPS cert check (all domains) =="
-          for d in tashykollections.com www.tashykollections.com tashykollections.online www.tashykollections.online tashykollections.org; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 20 "https://$d/" 2>/tmp/se || echo 000)
-            echo "  https://$d -> $code  $(head -1 /tmp/se 2>/dev/null)"
+          echo "  == HTTP redirect + HTTPS cert check =="
+          for d in tashykollections.com tashykollections.online tashykollections.org; do
+            redir=$(curl -sI --connect-timeout 20 "http://$d/" 2>/dev/null | grep -iE '^HTTP/|^location:' | tr '\n' ' ' | tr -d '\r')
+            https=$(curl -s -o /dev/null -w '%{http_code}' --connect-timeout 20 "https://$d/" 2>/dev/null || echo 000)
+            echo "  $d : HTTP[$redir] HTTPS[$https]"
           done
           echo "  == .org catalog clone (full output) =="
           curl -sS --connect-timeout 60 --max-time 180 "http://tashykollections.org/org-clone.php?k=tkorg9931" 2>&1 | head -60
