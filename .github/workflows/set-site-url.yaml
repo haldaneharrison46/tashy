@@ -32,7 +32,7 @@ jobs:
 
       - name: Inspect / edit SITE_URL over SSH
         env:
-          SSH_HOST: access-5020587559.webspace-host.com
+          SSH_HOST: access-5020640214.app-ionos.space
           SSH_USER: ${{ secrets.IONOS_DEPLOYMENT_BD4FC25F_E6A4_41D5_A436_924D7AEFB14B_SSH_USERNAME }}
           SITE_URL: ${{ inputs.site_url }}
           APPLY: ${{ inputs.apply }}
