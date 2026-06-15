@@ -75,7 +75,6 @@ jobs:
             srv=$(curl -sSI "$VERIFY_URL$path" 2>/dev/null | grep -i '^server:' | head -1)
             echo "  $path -> $line  $srv"
           done
-          echo "== DB reachability from runner (PDO connect) =="
-          php -r '$h=getenv("TK_DB_HOST");$n=getenv("TK_DB_NAME");$u=getenv("TK_DB_USER");$p=getenv("TK_DB_PASS"); try { new PDO("mysql:host=$h;dbname=$n",$u,$p,[PDO::ATTR_TIMEOUT=>10]); echo "DB_CONNECT=OK\n"; } catch (Throwable $e) { echo "DB_CONNECT=FAIL: ".$e->getMessage()."\n"; }'
-          echo "== index.php fetch (first 15 lines) =="
-          curl -s "$VERIFY_URL/index.php" | head -15
+          echo "== DB reachability FROM the webspace (the test that matters) =="
+          scp $SSHOPTS .github/deploy/dbtest.php "$SSH_USER@$SSH_HOST:dbtest.php"
+          $SSH 'P=$(command -v php || command -v php8.3 || command -v php8.2 || command -v php8.1 || ls /usr/bin/php* 2>/dev/null | head -1); echo "PHP_CLI=$P"; if [ -n "$P" ]; then "$P" dbtest.php; else echo "NO_PHP_CLI (cannot test from shell)"; fi; rm -f dbtest.php'
