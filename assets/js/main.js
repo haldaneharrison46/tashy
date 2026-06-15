@@ -160,20 +160,34 @@ document.addEventListener('DOMContentLoaded', function () {
     if (e.key === 'Escape') { closeCart(); closeMobile(); }
   });
 
-  /* ── Header icon dropdowns (currency / account / language) ── */
+  /* ── Header dropdowns (currency / account / language / theme) ──
+     All open on CLICK (not hover) so they work on touch devices, and close
+     when clicking elsewhere. */
+  function tkCloseMenus() {
+    document.querySelectorAll('.hdr-icon-wrap.open, .theme-switch.open')
+      .forEach(function (el) { el.classList.remove('open'); });
+  }
   document.querySelectorAll('.hdr-icon-wrap').forEach(function (wrap) {
     var btn = wrap.querySelector('.hdr-icon-btn');
     if (!btn) return;
     btn.addEventListener('click', function (e) {
       e.preventDefault(); e.stopPropagation();
       var isOpen = wrap.classList.contains('open');
-      document.querySelectorAll('.hdr-icon-wrap.open').forEach(function (w) { w.classList.remove('open'); });
+      tkCloseMenus();
       if (!isOpen) wrap.classList.add('open');
     });
   });
-  document.addEventListener('click', function () {
-    document.querySelectorAll('.hdr-icon-wrap.open').forEach(function (w) { w.classList.remove('open'); });
+  document.querySelectorAll('.theme-switch').forEach(function (ts) {
+    var tbtn = ts.querySelector('button');
+    if (!tbtn) return;
+    tbtn.addEventListener('click', function (e) {
+      e.preventDefault(); e.stopPropagation();
+      var isOpen = ts.classList.contains('open');
+      tkCloseMenus();
+      if (!isOpen) ts.classList.add('open');
+    });
   });
+  document.addEventListener('click', tkCloseMenus);
 
   /* ── AJAX Add-to-cart ─────────────────────────── */
   document.querySelectorAll('[data-add-to-cart]').forEach(function (btn) {

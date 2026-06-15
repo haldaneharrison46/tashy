@@ -2363,8 +2363,7 @@ select.form-control { cursor: pointer; }
   display: none;
   z-index: 1400;
 }
-.theme-switch:hover .theme-switch-menu,
-.theme-switch:focus-within .theme-switch-menu { display: block; }
+.theme-switch.open .theme-switch-menu { display: block; }
 .theme-switch-menu .ts-title {
   font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase;
   color: var(--grey-mid); font-weight: 700; padding: 6px 10px 8px;
