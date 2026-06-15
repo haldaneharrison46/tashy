@@ -78,7 +78,7 @@
 </footer>
 
 <script>window.TK_BASE=<?= json_encode(base_path()) ?>;</script>
-<script src="<?= SITE_URL ?>/assets/js/main.js"></script>
+<script src="assets/js/main.js"></script>
 <?php require __DIR__ . '/contact-widget.php'; ?>
 </body>
 </html>

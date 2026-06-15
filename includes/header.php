@@ -27,8 +27,8 @@ $_bodyClass = $bodyClass ?? '';
   ?>
   <meta name="description" content="<?= h($_desc) ?>">
   <link rel="canonical" href="<?= h($_canon) ?>">
-  <link rel="icon" type="image/svg+xml" href="<?= SITE_URL ?>/assets/images/favicon.svg">
-  <link rel="apple-touch-icon" href="<?= SITE_URL ?>/assets/images/favicon.svg">
+  <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
+  <link rel="apple-touch-icon" href="assets/images/favicon.svg">
   <!-- Open Graph / Twitter -->
   <meta property="og:site_name" content="<?= h(SITE_NAME) ?>">
   <meta property="og:title" content="<?= h($_pageTitle) ?>">
@@ -45,7 +45,10 @@ $_bodyClass = $bodyClass ?? '';
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/style.css">
+  <!-- Document-relative (not SITE_URL-absolute) so the stylesheet always loads from the
+       same origin the page is served from — robust to SITE_URL host/path misconfig and
+       works at the web root or in a /tashy sub-folder. All public pages are flat at root. -->
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body class="<?= h($_bodyClass) ?>">
 
