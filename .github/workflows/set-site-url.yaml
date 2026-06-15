@@ -65,8 +65,8 @@ jobs:
           echo "  config/db.php SITE_URL on Deploy Now webspace: $($SSH "grep \"define('SITE_URL'\" config/db.php" 2>/dev/null)"
           echo "  Deploy Now webspace IP (home-5020640214) = $(getent ahostsv4 home-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
           echo "  (old webspace was 74.208.236.55)"
-          echo "  == .org catalog clone =="
-          curl -s --connect-timeout 60 --max-time 120 "http://tashykollections.org/org-clone.php?k=tkorg9931" 2>/dev/null | tail -20
+          echo "  == .org catalog clone (full output) =="
+          curl -sS --connect-timeout 60 --max-time 180 "http://tashykollections.org/org-clone.php?k=tkorg9931" 2>&1 | head -60
           echo "  == .org live check =="
           curl -s -o /tmp/org.html -w '    HTTP=%{http_code}\n' --connect-timeout 20 "http://tashykollections.org/" 2>/dev/null
           echo "    canonical=$(grep -oiE 'rel=\"canonical\" href=\"[^\"]*\"' /tmp/org.html | head -1) css=$(grep -c 'assets/css/style.css' /tmp/org.html) products=$(grep -c 'product-card' /tmp/org.html) dbErr=$(grep -c 'Database connection failed' /tmp/org.html)"
