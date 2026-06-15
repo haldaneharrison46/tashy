@@ -49,6 +49,12 @@ jobs:
           SSHOPTS="-i $HOME/.ssh/id_ionos -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=25"
           SSH="ssh $SSHOPTS $SSH_USER@$SSH_HOST"
 
+          echo "== PROBE .online webspace (access-5020587559) with deploy key =="
+          for U in a1645260 "$SSH_USER"; do
+            echo "  trying user=$U:"
+            ssh -i $HOME/.ssh/id_ionos -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=20 "$U@access-5020587559.webspace-host.com" 'echo REACHED_5020587559; pwd; ls -d */ 2>/dev/null | head' 2>&1 | head -4
+          done
+
           echo "== whoami / pwd =="
           $SSH 'whoami; pwd'
 
