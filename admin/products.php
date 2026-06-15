@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
 
     if ($errors) flash('error', implode(' ', array_unique($errors)));
     flash('success', !empty($f['product_id']) ? 'Product saved.' : 'Product added.');
-    redirect(SITE_URL . '/admin/products.php' . (!empty($f['product_id']) ? '?action=edit&id=' . $pid : ''));
+    redirect(asset_base() . '/admin/products.php' . (!empty($f['product_id']) ? '?action=edit&id=' . $pid : ''));
 }
 
 /* ── Delete ──────────────────────────────────── */
@@ -102,7 +102,7 @@ if ($action === 'delete' && $editId) {
     csrf_check();
     $pdo->prepare("DELETE FROM products WHERE id=?")->execute([$editId]);
     flash('success', 'Product deleted.');
-    redirect(SITE_URL . '/admin/products.php');
+    redirect(asset_base() . '/admin/products.php');
 }
 
 /* ── Load product for editing ────────────────── */

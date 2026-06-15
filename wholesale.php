@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare('INSERT INTO contact_messages (name, email, subject, message) VALUES (?,?,?,?)');
         $stmt->execute([$name, $email, $subject, $message]);
         flash('success', 'Application received! Our wholesale team will be in touch within 1–2 business days.');
-        redirect(SITE_URL . '/wholesale.php');
+        redirect(asset_base() . '/wholesale.php');
     }
 }
 

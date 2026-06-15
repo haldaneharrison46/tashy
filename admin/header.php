@@ -120,7 +120,7 @@ body { display:flex; min-height:100vh; flex-direction:column; }
 
   <!-- Sidebar -->
   <aside class="admin-sidebar">
-    <a href="<?= SITE_URL ?>/admin/index.php" class="brand">⚡ <?= SITE_NAME ?><br><span style="font-size:0.7rem;font-weight:400;color:#777">Admin Panel</span></a>
+    <a href="<?= asset_base() ?>/admin/index.php" class="brand">⚡ <?= SITE_NAME ?><br><span style="font-size:0.7rem;font-weight:400;color:#777">Admin Panel</span></a>
     <nav>
       <div class="section-label">Main</div>
       <a href="index.php"    class="<?= $currentPage==='index.php'    ? 'active':'' ?>"><span class="icon">📊</span> Dashboard</a>
@@ -137,11 +137,11 @@ body { display:flex; min-height:100vh; flex-direction:column; }
       <a href="users.php"    class="<?= $currentPage==='users.php'    ? 'active':'' ?>"><span class="icon">👥</span> Staff &amp; Users</a>
       <a href="subscribers.php" class="<?= $currentPage==='subscribers.php' ? 'active':'' ?>"><span class="icon">✉️</span> Subscribers</a>
       <div class="section-label">Site</div>
-      <a href="<?= SITE_URL ?>" target="_blank"><span class="icon">🌐</span> View Store</a>
+      <a href="<?= asset_base() ?>" target="_blank"><span class="icon">🌐</span> View Store</a>
     </nav>
     <div class="sidebar-footer">
       Signed in as <strong><?= h($adminUser['name']) ?></strong><br>
-      <a href="<?= SITE_URL ?>/logout.php" style="color:#e07878">Sign out</a>
+      <a href="<?= asset_base() ?>/logout.php" style="color:#e07878">Sign out</a>
     </div>
   </aside>
 
@@ -152,7 +152,7 @@ body { display:flex; min-height:100vh; flex-direction:column; }
       <div class="topbar-right">
         <span class="tb-date"><?= date('l, d M Y') ?></span>
         <a href="products.php?action=add" class="tb-newprod">+ New Product</a>
-        <a href="<?= SITE_URL ?>/logout.php" style="color:#e07878">Sign out</a>
+        <a href="<?= asset_base() ?>/logout.php" style="color:#e07878">Sign out</a>
       </div>
     </div>
     <div class="admin-main">

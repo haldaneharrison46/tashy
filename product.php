@@ -7,7 +7,7 @@ if (!$product) {
     http_response_code(404);
     $pageTitle = 'Product Not Found | ' . SITE_NAME;
     require_once __DIR__ . '/includes/header.php';
-    echo '<div class="container" style="padding:80px 0;text-align:center"><h1>Product not found</h1><a href="' . SITE_URL . '/shop.php" class="btn btn-primary" style="margin-top:16px">Back to Shop</a></div>';
+    echo '<div class="container" style="padding:80px 0;text-align:center"><h1>Product not found</h1><a href="' . asset_base() . '/shop.php" class="btn btn-primary" style="margin-top:16px">Back to Shop</a></div>';
     require_once __DIR__ . '/includes/footer.php';
     exit;
 }
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_submit'])) {
                  ON DUPLICATE KEY UPDATE rating = VALUES(rating), body = VALUES(body), created_at = CURRENT_TIMESTAMP'
             )->execute([(int)$product['id'], current_user()['id'], $rating, $body]);
             flash('success', 'Thanks for your review!');
-            redirect(SITE_URL . '/product.php?slug=' . $product['slug'] . '#reviews');
+            redirect(asset_base() . '/product.php?slug=' . $product['slug'] . '#reviews');
         }
     }
 }
@@ -56,10 +56,10 @@ require_once __DIR__ . '/includes/header.php';
 <div class="container" style="padding-top:32px">
   <!-- Breadcrumb -->
   <nav class="breadcrumb" style="margin-bottom:24px;font-size:0.82rem;color:#999">
-    <a href="<?= SITE_URL ?>/index.php">Home</a> /
-    <a href="<?= SITE_URL ?>/shop.php">Shop</a> /
+    <a href="<?= asset_base() ?>/index.php">Home</a> /
+    <a href="<?= asset_base() ?>/shop.php">Shop</a> /
     <?php if ($product['category_slug']): ?>
-    <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($product['category_slug']) ?>"><?= h($product['category_name']) ?></a> /
+    <a href="<?= asset_base() ?>/shop.php?cat=<?= h($product['category_slug']) ?>"><?= h($product['category_name']) ?></a> /
     <?php endif; ?>
     <span style="color:#333"><?= h($product['name']) ?></span>
   </nav>
@@ -125,14 +125,14 @@ require_once __DIR__ . '/includes/header.php';
       <?php if ($product['tags']): ?>
       <div class="pdp-tags" style="margin-top:20px">
         <?php foreach (explode(',', $product['tags']) as $tag): ?>
-        <a href="<?= SITE_URL ?>/shop.php?q=<?= urlencode(trim($tag)) ?>" class="filter-tag" style="font-size:0.75rem"><?= h(trim($tag)) ?></a>
+        <a href="<?= asset_base() ?>/shop.php?q=<?= urlencode(trim($tag)) ?>" class="filter-tag" style="font-size:0.75rem"><?= h(trim($tag)) ?></a>
         <?php endforeach; ?>
       </div>
       <?php endif; ?>
 
       <div class="pdp-meta" style="margin-top:24px;font-size:0.82rem;color:#999">
         <?php if ($product['sku']): ?><p>SKU: <?= h($product['sku']) ?></p><?php endif; ?>
-        <p>Category: <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($product['category_slug']) ?>"><?= h($product['category_name']) ?></a></p>
+        <p>Category: <a href="<?= asset_base() ?>/shop.php?cat=<?= h($product['category_slug']) ?>"><?= h($product['category_name']) ?></a></p>
       </div>
     </div><!-- /.pdp-info -->
   </div>
@@ -177,7 +177,7 @@ require_once __DIR__ . '/includes/header.php';
         <button type="submit" class="btn btn-primary">Submit Review</button>
       </form>
       <?php else: ?>
-      <p style="color:#777"><a href="<?= SITE_URL ?>/login.php?next=<?= urlencode('/product.php?slug='.$product['slug']) ?>" style="color:var(--rose-gold)">Sign in</a> to write a review.</p>
+      <p style="color:#777"><a href="<?= asset_base() ?>/login.php?next=<?= urlencode('/product.php?slug='.$product['slug']) ?>" style="color:var(--rose-gold)">Sign in</a> to write a review.</p>
       <?php endif; ?>
     </div>
   </div>
@@ -192,13 +192,13 @@ require_once __DIR__ . '/includes/header.php';
       <?php foreach ($related as $r): ?>
       <div class="product-card">
         <div class="product-card-img">
-          <a href="<?= SITE_URL ?>/product.php?slug=<?= h($r['slug']) ?>">
+          <a href="<?= asset_base() ?>/product.php?slug=<?= h($r['slug']) ?>">
             <img src="<?= product_img($r['image']) ?>" alt="<?= h($r['name']) ?>" loading="lazy">
           </a>
         </div>
         <div class="product-card-body">
           <div class="product-brand"><?= h($r['brand']) ?></div>
-          <h3 class="product-name"><a href="<?= SITE_URL ?>/product.php?slug=<?= h($r['slug']) ?>"><?= h($r['name']) ?></a></h3>
+          <h3 class="product-name"><a href="<?= asset_base() ?>/product.php?slug=<?= h($r['slug']) ?>"><?= h($r['name']) ?></a></h3>
           <div class="product-footer">
             <span class="price-current"><?= money($r['price']) ?></span>
             <button class="quick-add-btn" onclick="addToCart(<?= $r['id'] ?>, this)">Add</button>

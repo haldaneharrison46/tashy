@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt = db()->prepare('INSERT INTO contact_messages (name, email, subject, message) VALUES (?,?,?,?)');
         $stmt->execute([$name, $email, $subject, $message]);
         flash('success', 'Thanks for reaching out! We\'ll get back to you within 24 hours.');
-        redirect(SITE_URL . '/contact.php');
+        redirect(asset_base() . '/contact.php');
     }
 }
 

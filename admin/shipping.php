@@ -13,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     set_setting('default_shipping_rate',  (string)max(0, (float)($_POST['default_shipping_rate'] ?? 0)));
     set_setting('free_shipping_threshold',(string)max(0, (float)($_POST['free_shipping_threshold'] ?? 0)));
     flash('success', 'Shipping settings saved.');
-    redirect(SITE_URL . '/admin/shipping.php');
+    redirect(asset_base() . '/admin/shipping.php');
 }
 
 /* ── Save zone (add / edit) ────────────────── */
@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_zone'])) {
 
     if ($name === '' || $plist === '') {
         flash('error', 'Zone name and at least one parish are required.');
-        redirect(SITE_URL . '/admin/shipping.php?action=' . ($id ? 'edit&id=' . $id : 'add'));
+        redirect(asset_base() . '/admin/shipping.php?action=' . ($id ? 'edit&id=' . $id : 'add'));
     }
     if ($id) {
         $pdo->prepare('UPDATE shipping_zones SET name=?, parishes=?, rate=?, free_threshold=?, active=?, sort_order=? WHERE id=?')
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_zone'])) {
             ->execute([$name, $plist, $rate, $free, $active, $sort]);
         flash('success', 'Zone added.');
     }
-    redirect(SITE_URL . '/admin/shipping.php');
+    redirect(asset_base() . '/admin/shipping.php');
 }
 
 /* ── Delete zone ───────────────────────────── */
@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_zone'])) {
     csrf_check();
     $pdo->prepare('DELETE FROM shipping_zones WHERE id=?')->execute([(int)$_POST['zone_id']]);
     flash('success', 'Zone deleted.');
-    redirect(SITE_URL . '/admin/shipping.php');
+    redirect(asset_base() . '/admin/shipping.php');
 }
 
 /* ── Zone add / edit form ──────────────────── */

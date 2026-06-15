@@ -16,7 +16,7 @@ require_once __DIR__ . '/includes/header.php';
 
     <div class="about-story">
       <div class="about-img">
-        <img src="<?= SITE_URL ?>/assets/images/aestheticjourney-cream-8293579_1920.jpg" alt="Styled home interior" loading="lazy" style="width:100%;height:100%;object-fit:cover">
+        <img src="<?= asset_base() ?>/assets/images/aestheticjourney-cream-8293579_1920.jpg" alt="Styled home interior" loading="lazy" style="width:100%;height:100%;object-fit:cover">
       </div>
       <div>
         <h2 style="margin-bottom:16px">Rooted in Falmouth, serving all of Jamaica</h2>
@@ -33,7 +33,7 @@ require_once __DIR__ . '/includes/header.php';
           Whether you're refreshing the bedroom, styling a living space, or finding your home's signature scent,
           our team is here with honest, expert advice every step of the way.
         </p>
-        <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary" style="margin-top:24px">Shop the Collection</a>
+        <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary" style="margin-top:24px">Shop the Collection</a>
       </div>
     </div>
   </div>
@@ -93,8 +93,8 @@ require_once __DIR__ . '/includes/header.php';
       <div class="stat-item"><strong>24h</strong><span>Support Response</span></div>
     </div>
     <div style="margin-top:36px;display:flex;gap:12px;flex-wrap:wrap">
-      <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary btn-lg">Shop Now</a>
-      <a href="<?= SITE_URL ?>/contact.php" class="btn btn-outline-white btn-lg">Contact Us</a>
+      <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary btn-lg">Shop Now</a>
+      <a href="<?= asset_base() ?>/contact.php" class="btn btn-outline-white btn-lg">Contact Us</a>
     </div>
   </div>
 </section>

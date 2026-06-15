@@ -91,7 +91,7 @@ $steps   = ['pending'=>'Order received','processing'=>'Being prepared','shipped'
       </div>
     <?php endif; ?>
 
-    <p style="margin-top:20px;font-size:0.85rem;color:#888">Need help? <a href="<?= SITE_URL ?>/contact.php" style="color:var(--rose-gold)">Contact us</a>.</p>
+    <p style="margin-top:20px;font-size:0.85rem;color:#888">Need help? <a href="<?= asset_base() ?>/contact.php" style="color:var(--rose-gold)">Contact us</a>.</p>
   </div>
 </div>
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

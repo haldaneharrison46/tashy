@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     if ($newTok !== '') set_setting('fb_page_token', $newTok);
     set_setting('social_webhook_url', trim($_POST['social_webhook_url'] ?? ''));
     flash('success', 'Marketing settings saved.');
-    redirect(SITE_URL . '/admin/marketing.php');
+    redirect(asset_base() . '/admin/marketing.php');
 }
 
 /* ── Save post (draft / schedule / publish) ────── */
@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_post'])) {
     $schedRaw  = trim($_POST['scheduled_at'] ?? '');
     $schedAt   = ($mode === 'schedule' && $schedRaw !== '') ? date('Y-m-d H:i:s', strtotime($schedRaw)) : null;
 
-    if ($body === '') { flash('error', 'Post text is required.'); redirect(SITE_URL . '/admin/marketing.php?action=new'); }
+    if ($body === '') { flash('error', 'Post text is required.'); redirect(asset_base() . '/admin/marketing.php?action=new'); }
 
     $status = $mode === 'schedule' ? 'scheduled' : 'draft';
     if ($id) {
@@ -66,10 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_post'])) {
         $pdo->prepare('UPDATE marketing_posts SET status=?, published_at=NOW(), result=? WHERE id=?')
             ->execute([$pub['ok'] ? 'published' : 'failed', json_encode($pub['results']), $id]);
         flash($pub['ok'] ? 'success' : 'error', $pub['ok'] ? 'Post published.' : 'Publishing finished with errors — see the post for details.');
-        redirect(SITE_URL . '/admin/marketing.php?id=' . $id);
+        redirect(asset_base() . '/admin/marketing.php?id=' . $id);
     }
     flash('success', $mode === 'schedule' ? 'Post scheduled.' : 'Draft saved.');
-    redirect(SITE_URL . '/admin/marketing.php?id=' . $id);
+    redirect(asset_base() . '/admin/marketing.php?id=' . $id);
 }
 
 /* ── Publish an existing post now ──────────────── */
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['publish_now'])) {
             ->execute([$pub['ok'] ? 'published' : 'failed', json_encode($pub['results']), $id]);
         flash($pub['ok'] ? 'success' : 'error', $pub['ok'] ? 'Post published.' : 'Publishing finished with errors.');
     }
-    redirect(SITE_URL . '/admin/marketing.php?id=' . $id);
+    redirect(asset_base() . '/admin/marketing.php?id=' . $id);
 }
 
 /* ── Delete ────────────────────────────────────── */
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_post'])) {
     csrf_check();
     $pdo->prepare('DELETE FROM marketing_posts WHERE id=?')->execute([(int)$_POST['post_id']]);
     flash('success', 'Post deleted.');
-    redirect(SITE_URL . '/admin/marketing.php');
+    redirect(asset_base() . '/admin/marketing.php');
 }
 
 $products = $pdo->query("SELECT id, name, brand, price, image FROM products WHERE active=1 ORDER BY name")->fetchAll();
@@ -214,7 +214,7 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
 </div>
 
 <script>
-function pvImgSrc(v) { return !v ? '' : (/^https?:\/\//i.test(v) ? v : '<?= SITE_URL ?>/assets/images/' + v); }
+function pvImgSrc(v) { return !v ? '' : (/^https?:\/\//i.test(v) ? v : '<?= asset_base() ?>/assets/images/' + v); }
 function updatePreview() {
   document.getElementById('pvBody').textContent = document.getElementById('mBody').value || 'Your caption preview…';
   document.getElementById('pvTags').textContent = document.getElementById('mTags').value || '';
@@ -224,7 +224,7 @@ function updatePreview() {
   document.getElementById('pvPlat').textContent = plat ? ('· ' + plat.options[plat.selectedIndex].text) : '';
 }
 const CSRF = <?= json_encode(csrf_token()) ?>;
-const API  = '<?= SITE_URL ?>/api/marketing_ai.php';
+const API  = '<?= asset_base() ?>/api/marketing_ai.php';
 const checkedProductIds = () => [...document.querySelectorAll('.prodCb:checked')].map(c => c.value);
 
 // product list filter
@@ -313,7 +313,7 @@ updatePreview();
 /* ════════════════ SINGLE POST VIEW ════════════════ */
 if ($editId) {
     $st = $pdo->prepare('SELECT * FROM marketing_posts WHERE id=?'); $st->execute([$editId]); $post = $st->fetch();
-    if (!$post) { flash('error','Post not found.'); redirect(SITE_URL.'/admin/marketing.php'); }
+    if (!$post) { flash('error','Post not found.'); redirect(asset_base() . '/admin/marketing.php'); }
     $results = $post['result'] ? json_decode($post['result'], true) : [];
     $links = social_share_links(trim($post['body'].' '.$post['hashtags']), $post['link_url'] ?: SITE_URL);
     $ok = flash('success'); $err = flash('error');

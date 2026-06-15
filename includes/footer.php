@@ -28,25 +28,25 @@
         <h4>Shop</h4>
         <ul>
           <?php foreach (get_categories() as $c): ?>
-          <li><a href="<?= SITE_URL ?>/shop.php?cat=<?= h($c['slug']) ?>"><?= h($c['name']) ?></a></li>
+          <li><a href="<?= asset_base() ?>/shop.php?cat=<?= h($c['slug']) ?>"><?= h($c['name']) ?></a></li>
           <?php endforeach; ?>
-          <li><a href="<?= SITE_URL ?>/shop.php?featured=1">Best Sellers</a></li>
-          <li><a href="<?= SITE_URL ?>/shop.php?sort=new">New Arrivals</a></li>
+          <li><a href="<?= asset_base() ?>/shop.php?featured=1">Best Sellers</a></li>
+          <li><a href="<?= asset_base() ?>/shop.php?sort=new">New Arrivals</a></li>
         </ul>
       </div>
 
       <div class="footer-col">
         <h4>Help</h4>
         <ul>
-          <li><a href="<?= SITE_URL ?>/track.php">Track Your Order</a></li>
-          <li><a href="<?= SITE_URL ?>/contact.php">Contact Us</a></li>
-          <li><a href="<?= SITE_URL ?>/policy.php">Shipping &amp; Returns</a></li>
-          <li><a href="<?= SITE_URL ?>/wholesale.php">Wholesale B2B</a></li>
-          <li><a href="<?= SITE_URL ?>/about.php">About Us</a></li>
+          <li><a href="<?= asset_base() ?>/track.php">Track Your Order</a></li>
+          <li><a href="<?= asset_base() ?>/contact.php">Contact Us</a></li>
+          <li><a href="<?= asset_base() ?>/policy.php">Shipping &amp; Returns</a></li>
+          <li><a href="<?= asset_base() ?>/wholesale.php">Wholesale B2B</a></li>
+          <li><a href="<?= asset_base() ?>/about.php">About Us</a></li>
           <?php if (current_user()): ?>
-          <li><a href="<?= SITE_URL ?>/account.php">My Account</a></li>
+          <li><a href="<?= asset_base() ?>/account.php">My Account</a></li>
           <?php else: ?>
-          <li><a href="<?= SITE_URL ?>/login.php">Sign In</a></li>
+          <li><a href="<?= asset_base() ?>/login.php">Sign In</a></li>
           <?php endif; ?>
         </ul>
       </div>
@@ -69,9 +69,9 @@
         Built with ❤️ in Jamaica 🇯🇲
       </p>
       <div class="footer-legal">
-        <a href="<?= SITE_URL ?>/policy.php">Privacy Policy</a>
-        <a href="<?= SITE_URL ?>/policy.php#terms">Terms</a>
-        <a href="<?= SITE_URL ?>/admin/login.php" style="opacity:0.3;font-size:0.7rem">Staff</a>
+        <a href="<?= asset_base() ?>/policy.php">Privacy Policy</a>
+        <a href="<?= asset_base() ?>/policy.php#terms">Terms</a>
+        <a href="<?= asset_base() ?>/admin/login.php" style="opacity:0.3;font-size:0.7rem">Staff</a>
       </div>
     </div>
   </div>

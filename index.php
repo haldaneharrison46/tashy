@@ -15,8 +15,8 @@ require_once __DIR__ . '/includes/header.php';
       <h1>Make a <span>statement</span> in every room</h1>
       <p>Bedding, comforters, mats, kitchen &amp; bath essentials, and signature fragrances — curated to turn your house into a home that speaks for itself.</p>
       <div class="hero-home-ctas">
-        <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary btn-lg">Shop Collections</a>
-        <a href="<?= SITE_URL ?>/about.php" class="btn btn-outline-white btn-lg">Our Story</a>
+        <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary btn-lg">Shop Collections</a>
+        <a href="<?= asset_base() ?>/about.php" class="btn btn-outline-white btn-lg">Our Story</a>
       </div>
       <div class="hero-home-proofs">
         <div class="hero-home-proof">
@@ -54,7 +54,7 @@ require_once __DIR__ . '/includes/header.php';
         ];
         foreach ($collections as $c):
       ?>
-      <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($c['slug']) ?>" class="collection-card">
+      <a href="<?= asset_base() ?>/shop.php?cat=<?= h($c['slug']) ?>" class="collection-card">
         <div class="cc-icon"><?= $c['icon'] ?></div>
         <h3><?= $c['name'] ?></h3>
         <p><?= $c['desc'] ?></p>
@@ -76,13 +76,13 @@ require_once __DIR__ . '/includes/header.php';
         <h2 class="section-title">Featured This Season</h2>
         <p class="section-sub">Hand-picked pieces our community is loving.</p>
       </div>
-      <a href="<?= SITE_URL ?>/shop.php" class="btn btn-outline">View All</a>
+      <a href="<?= asset_base() ?>/shop.php" class="btn btn-outline">View All</a>
     </div>
     <div class="product-grid" id="productGrid">
       <?php foreach ($featuredProducts as $p): ?>
       <div class="product-card" data-product-id="<?= $p['id'] ?>">
         <div class="product-card-img">
-          <a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>">
+          <a href="<?= asset_base() ?>/product.php?slug=<?= h($p['slug']) ?>">
             <img src="<?= product_img($p['image']) ?>" alt="<?= h($p['name']) ?>" loading="lazy">
           </a>
           <?php if ($p['compare_price']): ?>
@@ -94,7 +94,7 @@ require_once __DIR__ . '/includes/header.php';
         </div>
         <div class="product-card-body">
           <div class="product-brand"><?= h($p['brand']) ?></div>
-          <h3 class="product-name"><a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>"><?= h($p['name']) ?></a></h3>
+          <h3 class="product-name"><a href="<?= asset_base() ?>/product.php?slug=<?= h($p['slug']) ?>"><?= h($p['name']) ?></a></h3>
           <div class="product-footer">
             <div class="product-price">
               <span class="price-current"><?= money($p['price']) ?></span>
@@ -121,7 +121,7 @@ require_once __DIR__ . '/includes/header.php';
         <p>Explore our curated fragrance collection — candles, diffusers and eau de parfum for him, for her, and for your home.</p>
       </div>
       <div class="wholesale-banner-cta">
-        <a href="<?= SITE_URL ?>/shop.php?cat=fragrances" class="btn btn-primary btn-lg">Shop Fragrances</a>
+        <a href="<?= asset_base() ?>/shop.php?cat=fragrances" class="btn btn-primary btn-lg">Shop Fragrances</a>
       </div>
     </div>
   </div>
@@ -134,7 +134,7 @@ require_once __DIR__ . '/includes/header.php';
       <span class="statement-mark">&ldquo;</span>
       <h2>Making statements, one space at a time</h2>
       <p>From the heart of Falmouth, Trelawny, Tashy Kollections curates bedding, home essentials, and fragrances that turn a house into a statement. Thoughtfully sourced, beautifully made, and delivered across all 14 parishes of Jamaica.</p>
-      <a href="<?= SITE_URL ?>/about.php" class="btn btn-outline" style="margin-top:26px">Read Our Story</a>
+      <a href="<?= asset_base() ?>/about.php" class="btn btn-outline" style="margin-top:26px">Read Our Story</a>
     </div>
   </div>
 </section>

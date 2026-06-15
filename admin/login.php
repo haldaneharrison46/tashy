@@ -7,7 +7,7 @@ require_once dirname(__DIR__) . '/includes/auth.php';
 
 // Already signed in as an admin? straight to the dashboard.
 $u = current_user();
-if ($u && $u['role'] === 'admin') redirect(SITE_URL . '/admin/index.php');
+if ($u && $u['role'] === 'admin') redirect(asset_base() . '/admin/index.php');
 
 $error = '';
 $mode  = ($_GET['mode'] ?? '') === 'pin' || isset($_POST['pin']) ? 'pin' : 'password';
@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($matched) {
                 pin_clear($ip);
                 login_session($matched);
-                redirect(SITE_URL . '/admin/index.php');
+                redirect(asset_base() . '/admin/index.php');
             }
             pin_register_fail($ip);
             $error = 'Incorrect PIN.';
@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = login_user($_POST['email'] ?? '', $_POST['password'] ?? '');
         if ($result['ok']) {
             if (($result['user']['role'] ?? '') === 'admin') {
-                redirect(SITE_URL . '/admin/index.php');
+                redirect(asset_base() . '/admin/index.php');
             }
             logout_user();
             $error = 'That account does not have admin access.';
@@ -137,7 +137,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       <a class="alt" onclick="tkShow('pw')">Use email &amp; password →</a>
     </form>
 
-    <a class="back" href="<?= SITE_URL ?>/index.php">← Back to store</a>
+    <a class="back" href="<?= asset_base() ?>/index.php">← Back to store</a>
   </div>
   <script>
     function tkShow(which){

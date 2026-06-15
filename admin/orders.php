@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     if (record_order_status($oid, $status, $note, current_user()['name'])) {
         flash('success', 'Status updated — customer notified.');
     }
-    redirect(SITE_URL . '/admin/orders.php' . ($viewId ? "?id=$oid" : ''));
+    redirect(asset_base() . '/admin/orders.php' . ($viewId ? "?id=$oid" : ''));
 }
 
 /* ── Tag order for follow-up ───────────────── */
@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_order'])) {
     $pdo->prepare("UPDATE orders SET followup_channel=?, followup_note=? WHERE id=?")
         ->execute([$ch !== '' ? $ch : null, $nt !== '' ? $nt : null, $oid]);
     flash('success', $ch ? 'Order tagged for follow-up.' : 'Follow-up tag cleared.');
-    redirect(SITE_URL . '/admin/orders.php?id=' . $oid);
+    redirect(asset_base() . '/admin/orders.php?id=' . $oid);
 }
 
 /* ── Single order view ─────────────────────── */
@@ -38,7 +38,7 @@ if ($viewId) {
     $stmt = $pdo->prepare("SELECT o.*, u.name as uname, u.email as uemail FROM orders o LEFT JOIN users u ON o.user_id=u.id WHERE o.id=?");
     $stmt->execute([$viewId]);
     $order = $stmt->fetch();
-    if (!$order) { flash('error', 'Order not found.'); redirect(SITE_URL . '/admin/orders.php'); }
+    if (!$order) { flash('error', 'Order not found.'); redirect(asset_base() . '/admin/orders.php'); }
 
     $items = $pdo->prepare("SELECT * FROM order_items WHERE order_id=?");
     $items->execute([$viewId]);
@@ -112,7 +112,7 @@ if ($viewId) {
             </select>
             <input type="text" name="status_note" class="form-control" placeholder="Note (optional, e.g. tracking #)" style="margin-bottom:8px">
             <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Update &amp; notify</button>
-            <a href="<?= SITE_URL ?>/track.php?order=<?= urlencode($order['order_number']) ?>" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:0.78rem;color:var(--rose-gold)">View public tracking ↗</a>
+            <a href="<?= asset_base() ?>/track.php?order=<?= urlencode($order['order_number']) ?>" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:0.78rem;color:var(--rose-gold)">View public tracking ↗</a>
           </form>
         </div>
 

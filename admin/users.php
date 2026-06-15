@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_role'])) {
         $pdo->prepare("UPDATE users SET role='admin' WHERE id=?")->execute([$uid]);
         flash('success', 'User promoted to admin.');
     }
-    redirect(SITE_URL . '/admin/users.php');
+    redirect(asset_base() . '/admin/users.php');
 }
 
 /* ── Delete user ───────────────────────────── */
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_user'])) {
         $pdo->prepare("DELETE FROM users WHERE id=?")->execute([$uid]);
         flash('success', 'User deleted.');
     }
-    redirect(SITE_URL . '/admin/users.php');
+    redirect(asset_base() . '/admin/users.php');
 }
 
 $search = trim($_GET['q'] ?? '');

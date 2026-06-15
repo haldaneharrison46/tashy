@@ -76,7 +76,7 @@ document.querySelectorAll('.kb-col').forEach(col => {
     list.appendChild(card);                         // optimistic move
     updateCounts();
     try {
-      const r = await fetch('<?= SITE_URL ?>/api/order_status.php', {
+      const r = await fetch('<?= asset_base() ?>/api/order_status.php', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ csrf: CSRF, order_id: dragId, status })
       });

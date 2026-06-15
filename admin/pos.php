@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['complete_sale'])) {
                     }
                     $pdo->commit();
                     flash('success', 'Sale completed — ' . $orderNum);
-                    redirect(SITE_URL . '/admin/pos.php?receipt=' . $orderId);
+                    redirect(asset_base() . '/admin/pos.php?receipt=' . $orderId);
                 } catch (Throwable $e) {
                     $pdo->rollBack();
                     $err = 'Sale failed: ' . $e->getMessage();
@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email_invoice'])) {
     } else {
         flash('error', 'No valid customer email on this sale — add one in Orders, or use WhatsApp/Print.');
     }
-    redirect(SITE_URL . '/admin/pos.php?receipt=' . $oid);
+    redirect(asset_base() . '/admin/pos.php?receipt=' . $oid);
 }
 
 // ── All redirecting POST handlers are done; safe to start output now ──

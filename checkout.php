@@ -4,7 +4,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/cart.php';
 
 $totals = cart_totals();
-if (empty($totals['items'])) redirect(SITE_URL . '/cart.php');
+if (empty($totals['items'])) redirect(asset_base() . '/cart.php');
 
 $user   = current_user();
 $errors = [];
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ], $totals['items']);
             } catch (Throwable $e) { /* don't block the order on email errors */ }
 
-            redirect(SITE_URL . '/order-success.php?order=' . urlencode($orderNum));
+            redirect(asset_base() . '/order-success.php?order=' . urlencode($orderNum));
         } catch (Exception $e) {
             $pdo->rollBack();
             $errors[] = 'Order failed. Please try again.';

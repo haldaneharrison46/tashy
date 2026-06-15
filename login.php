@@ -2,10 +2,10 @@
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
 
-if (is_logged_in()) redirect(SITE_URL . '/account.php');
+if (is_logged_in()) redirect(asset_base() . '/account.php');
 
 $error = '';
-$next  = $_GET['next'] ?? SITE_URL . '/account.php';
+$next  = $_GET['next'] ?? asset_base() . '/account.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
@@ -46,7 +46,7 @@ require_once __DIR__ . '/includes/header.php';
       </form>
 
       <div style="text-align:center;margin-top:20px;font-size:0.9rem">
-        Don't have an account? <a href="<?= SITE_URL ?>/register.php" style="color:var(--rose-gold)">Create one</a>
+        Don't have an account? <a href="<?= asset_base() ?>/register.php" style="color:var(--rose-gold)">Create one</a>
       </div>
     </div>
   </div>

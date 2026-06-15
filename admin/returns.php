@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_return'])) {
             if ($q > 0) $lines[] = ['product_id'=>$row['product_id'],'name'=>$row['name'],'price'=>$row['price'],'quantity'=>min($q,(int)$row['quantity'])];
         }
     }
-    if (empty($lines)) { flash('error','Select at least one item (quantity) to return.'); redirect(SITE_URL.'/admin/returns.php?action=new&order_id='.$oid); }
+    if (empty($lines)) { flash('error','Select at least one item (quantity) to return.'); redirect(asset_base() . '/admin/returns.php?action=new&order_id='.$oid); }
 
     $rma = 'RMA-' . strtoupper(substr(uniqid(), -6));
     $pdo->prepare("INSERT INTO returns (order_id, rma_number, reason, refund_amount, created_by) VALUES (?,?,?,?,?)")
@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_return'])) {
     $ins = $pdo->prepare("INSERT INTO return_items (return_id, product_id, name, price, quantity) VALUES (?,?,?,?,?)");
     foreach ($lines as $l) $ins->execute([$rid, $l['product_id'], $l['name'], $l['price'], $l['quantity']]);
     flash('success', 'Return ' . $rma . ' created.');
-    redirect(SITE_URL.'/admin/returns.php?id='.$rid);
+    redirect(asset_base() . '/admin/returns.php?id='.$rid);
 }
 
 /* ── Update status ─────────────────────────── */
@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_return'])) {
     $refund = max(0, (float)($_POST['refund_amount'] ?? 0));
     $pdo->prepare("UPDATE returns SET status=?, refund_amount=? WHERE id=?")->execute([$stt, $refund, $rid]);
     flash('success', 'Return updated.');
-    redirect(SITE_URL.'/admin/returns.php?id='.$rid);
+    redirect(asset_base() . '/admin/returns.php?id='.$rid);
 }
 
 /* ── Restock returned items ────────────────── */
@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['restock_return'])) {
         $pdo->prepare("UPDATE returns SET restocked=1 WHERE id=?")->execute([$rid]);
         flash('success', 'Items restocked to inventory.');
     }
-    redirect(SITE_URL.'/admin/returns.php?id='.$rid);
+    redirect(asset_base() . '/admin/returns.php?id='.$rid);
 }
 
 /* ── New return form ───────────────────────── */
@@ -121,7 +121,7 @@ if ($action === 'new') {
 if ($viewId) {
     $q=$pdo->prepare("SELECT r.*, o.order_number FROM returns r LEFT JOIN orders o ON o.id=r.order_id WHERE r.id=?");
     $q->execute([$viewId]); $ret=$q->fetch();
-    if (!$ret) { flash('error','Return not found.'); redirect(SITE_URL.'/admin/returns.php'); }
+    if (!$ret) { flash('error','Return not found.'); redirect(asset_base() . '/admin/returns.php'); }
     $ri=$pdo->prepare("SELECT * FROM return_items WHERE return_id=?"); $ri->execute([$viewId]); $rItems=$ri->fetchAll();
     $ok=flash('success');
     ?>

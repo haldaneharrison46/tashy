@@ -2,7 +2,7 @@
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/includes/auth.php';
 
-if (is_logged_in()) redirect(SITE_URL . '/account.php');
+if (is_logged_in()) redirect(asset_base() . '/account.php');
 
 $error = '';
 
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = register_user($name, $email, $password, $phone);
         if ($result['ok']) {
             flash('success', 'Account created! Welcome to Tashy Kollections.');
-            redirect(SITE_URL . '/account.php');
+            redirect(asset_base() . '/account.php');
         }
         $error = $result['error'];
     }
@@ -70,7 +70,7 @@ require_once __DIR__ . '/includes/header.php';
       </form>
 
       <div style="text-align:center;margin-top:20px;font-size:0.9rem">
-        Already have an account? <a href="<?= SITE_URL ?>/login.php" style="color:var(--rose-gold)">Sign in</a>
+        Already have an account? <a href="<?= asset_base() ?>/login.php" style="color:var(--rose-gold)">Sign in</a>
       </div>
     </div>
   </div>

@@ -27,9 +27,9 @@ require_once __DIR__ . '/includes/header.php';
     <p style="margin-top:12px;color:#666">Your order has been placed successfully.</p>
     <?php endif; ?>
     <div style="display:flex;gap:12px;justify-content:center;margin-top:16px">
-      <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary">Continue Shopping</a>
+      <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary">Continue Shopping</a>
       <?php if (is_logged_in()): ?>
-      <a href="<?= SITE_URL ?>/account.php?tab=orders" class="btn btn-outline">View My Orders</a>
+      <a href="<?= asset_base() ?>/account.php?tab=orders" class="btn btn-outline">View My Orders</a>
       <?php endif; ?>
     </div>
   </div>

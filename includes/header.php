@@ -58,7 +58,7 @@ $_bodyClass = $bodyClass ?? '';
     <div class="header-inner">
 
       <!-- Logo -->
-      <a href="<?= SITE_URL ?>/index.php" class="header-logo">
+      <a href="<?= asset_base() ?>/index.php" class="header-logo">
         <svg class="logo-svg" width="250" height="44" viewBox="0 0 250 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Tashy Kollections">
           <!-- Emblem: roundel monogram -->
           <circle cx="22" cy="22" r="20" fill="none" stroke="#c9956c" stroke-width="1.4"/>
@@ -76,27 +76,27 @@ $_bodyClass = $bodyClass ?? '';
       <nav class="header-nav" aria-label="Main navigation">
         <ul class="primary-nav">
           <li class="nav-item">
-            <a href="<?= SITE_URL ?>/index.php" class="nav-link">Home</a>
+            <a href="<?= asset_base() ?>/index.php" class="nav-link">Home</a>
           </li>
           <li class="nav-item">
-            <a href="<?= SITE_URL ?>/shop.php" class="nav-link">Shop Now</a>
+            <a href="<?= asset_base() ?>/shop.php" class="nav-link">Shop Now</a>
             <div class="dropdown">
               <?php foreach ($_cats as $cat): ?>
               <div class="dropdown-col">
-                <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($cat['slug']) ?>"><?= h($cat['name']) ?></a>
+                <a href="<?= asset_base() ?>/shop.php?cat=<?= h($cat['slug']) ?>"><?= h($cat['name']) ?></a>
               </div>
               <?php endforeach; ?>
               <div class="dropdown-col">
-                <a href="<?= SITE_URL ?>/shop.php?sort=new">New Arrivals</a>
-                <a href="<?= SITE_URL ?>/shop.php?featured=1">Best Sellers</a>
+                <a href="<?= asset_base() ?>/shop.php?sort=new">New Arrivals</a>
+                <a href="<?= asset_base() ?>/shop.php?featured=1">Best Sellers</a>
               </div>
             </div>
           </li>
           <!-- Wholesale B2B hidden from menu (2026-06-08) — page still reachable directly at /wholesale.php
-          <li class="nav-item"><a href="<?= SITE_URL ?>/wholesale.php" class="nav-link">Wholesale B2B <span class="wholesale-nav-badge">PRO</span></a></li>
+          <li class="nav-item"><a href="<?= asset_base() ?>/wholesale.php" class="nav-link">Wholesale B2B <span class="wholesale-nav-badge">PRO</span></a></li>
           -->
-          <li class="nav-item"><a href="<?= SITE_URL ?>/about.php" class="nav-link">About</a></li>
-          <li class="nav-item"><a href="<?= SITE_URL ?>/contact.php" class="nav-link">Contact</a></li>
+          <li class="nav-item"><a href="<?= asset_base() ?>/about.php" class="nav-link">About</a></li>
+          <li class="nav-item"><a href="<?= asset_base() ?>/contact.php" class="nav-link">Contact</a></li>
         </ul>
       </nav>
 
@@ -133,7 +133,7 @@ $_bodyClass = $bodyClass ?? '';
         </div>
 
         <!-- Search -->
-        <form action="<?= SITE_URL ?>/shop.php" method="get" class="hdr-search-form" id="hdrSearchForm" role="search" style="display:none">
+        <form action="<?= asset_base() ?>/shop.php" method="get" class="hdr-search-form" id="hdrSearchForm" role="search" style="display:none">
           <input type="text" name="q" placeholder="Search products…" class="hdr-search-input" autocomplete="off">
           <button type="submit" class="hdr-search-submit" aria-label="Submit search">
             <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
@@ -165,16 +165,16 @@ $_bodyClass = $bodyClass ?? '';
             <span><?= h(explode(' ', $_user['name'])[0]) ?></span>
           </button>
           <div class="hdr-icon-menu">
-            <a class="hdr-icon-opt" href="<?= SITE_URL ?>/account.php">My Account</a>
-            <a class="hdr-icon-opt" href="<?= SITE_URL ?>/account.php?tab=orders">My Orders</a>
+            <a class="hdr-icon-opt" href="<?= asset_base() ?>/account.php">My Account</a>
+            <a class="hdr-icon-opt" href="<?= asset_base() ?>/account.php?tab=orders">My Orders</a>
             <?php if ($_user['role'] === 'admin'): ?>
-            <a class="hdr-icon-opt" href="<?= SITE_URL ?>/admin/index.php">Admin Panel</a>
+            <a class="hdr-icon-opt" href="<?= asset_base() ?>/admin/index.php">Admin Panel</a>
             <?php endif; ?>
-            <a class="hdr-icon-opt" href="<?= SITE_URL ?>/logout.php" style="color:#c0392b">Sign Out</a>
+            <a class="hdr-icon-opt" href="<?= asset_base() ?>/logout.php" style="color:#c0392b">Sign Out</a>
           </div>
         </div>
         <?php else: ?>
-        <a href="<?= SITE_URL ?>/login.php" class="header-action-btn" aria-label="Account">
+        <a href="<?= asset_base() ?>/login.php" class="header-action-btn" aria-label="Account">
           <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         </a>
         <?php endif; ?>
@@ -212,28 +212,28 @@ $_bodyClass = $bodyClass ?? '';
     </div>
   </div>
   <ul>
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/index.php" class="mobile-nav-link">Home</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/index.php" class="mobile-nav-link">Home</a></li>
     <li class="mobile-nav-item">
       <button class="mobile-nav-link" onclick="toggleMobileSub(this)"><span>Shop Now</span> <span>›</span></button>
       <div class="mobile-nav-sub">
         <?php foreach ($_cats as $c): ?>
-        <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($c['slug']) ?>"><?= h($c['name']) ?></a>
+        <a href="<?= asset_base() ?>/shop.php?cat=<?= h($c['slug']) ?>"><?= h($c['name']) ?></a>
         <?php endforeach; ?>
-        <a href="<?= SITE_URL ?>/shop.php?sort=new">New Arrivals</a>
-        <a href="<?= SITE_URL ?>/shop.php?featured=1">Best Sellers</a>
+        <a href="<?= asset_base() ?>/shop.php?sort=new">New Arrivals</a>
+        <a href="<?= asset_base() ?>/shop.php?featured=1">Best Sellers</a>
       </div>
     </li>
     <!-- Wholesale B2B hidden from menu (2026-06-08)
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/wholesale.php" class="mobile-nav-link">Wholesale B2B</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/wholesale.php" class="mobile-nav-link">Wholesale B2B</a></li>
     -->
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/about.php" class="mobile-nav-link">About</a></li>
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/contact.php" class="mobile-nav-link">Contact</a></li>
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/policy.php" class="mobile-nav-link">Shipping &amp; Returns</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/about.php" class="mobile-nav-link">About</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/contact.php" class="mobile-nav-link">Contact</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/policy.php" class="mobile-nav-link">Shipping &amp; Returns</a></li>
     <?php if ($_user): ?>
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/account.php" class="mobile-nav-link">My Account</a></li>
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/logout.php" class="mobile-nav-link" style="color:#c0392b">Sign Out</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/account.php" class="mobile-nav-link">My Account</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/logout.php" class="mobile-nav-link" style="color:#c0392b">Sign Out</a></li>
     <?php else: ?>
-    <li class="mobile-nav-item"><a href="<?= SITE_URL ?>/login.php" class="mobile-nav-link">Sign In / Register</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/login.php" class="mobile-nav-link">Sign In / Register</a></li>
     <?php endif; ?>
   </ul>
 </nav>
@@ -255,7 +255,7 @@ $_bodyClass = $bodyClass ?? '';
       <div class="cart-empty">
         <svg width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
         <p>Your cart is empty.</p>
-        <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary" style="margin-top:8px">Shop Now</a>
+        <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary" style="margin-top:8px">Shop Now</a>
       </div>
       <?php else: foreach ($cart as $item): ?>
       <div class="cart-item" data-item-id="<?= $item['id'] ?>">
@@ -293,8 +293,8 @@ $_bodyClass = $bodyClass ?? '';
         <span><strong>Total (incl. GCT)</strong></span>
         <span><strong><?= money($totals['total']) ?></strong></span>
       </div>
-      <a href="<?= SITE_URL ?>/checkout.php" class="cart-checkout-btn">Proceed to Checkout</a>
-      <a href="<?= SITE_URL ?>/cart.php" class="cart-view-all">View full cart</a>
+      <a href="<?= asset_base() ?>/checkout.php" class="cart-checkout-btn">Proceed to Checkout</a>
+      <a href="<?= asset_base() ?>/cart.php" class="cart-view-all">View full cart</a>
     </div>
     <?php endif; ?>
   </div>

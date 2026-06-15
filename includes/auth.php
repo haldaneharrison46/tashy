@@ -26,14 +26,14 @@ function current_user(): array|null {
 function require_login(string $redirect = ''): void {
     if (!is_logged_in()) {
         $back = $redirect ?: $_SERVER['REQUEST_URI'];
-        redirect(SITE_URL . '/login.php?next=' . urlencode($back));
+        redirect(asset_base() . '/login.php?next=' . urlencode($back));
     }
 }
 
 function require_admin(): void {
     $u = current_user();
     if (!$u || $u['role'] !== 'admin') {
-        redirect(SITE_URL . '/admin/login.php');
+        redirect(asset_base() . '/admin/login.php');
     }
 }
 

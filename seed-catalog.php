@@ -74,5 +74,5 @@ echo '<p>Catalog now has <strong>' . $catCount . ' categories</strong> and <stro
    . $prodCount . ' products</strong>.</p>';
 echo '<p style="background:#fdecea;border-left:4px solid #c0392b;padding:12px 16px">'
    . '<strong>Now delete this file</strong> (seed-catalog.php) from the server.</p>';
-echo '<p><a href="' . SITE_URL . '/shop.php">View the shop →</a></p>';
+echo '<p><a href="' . asset_base() . '/shop.php">View the shop →</a></p>';
 echo '</body>';

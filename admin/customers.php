@@ -59,15 +59,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_customer'])) {
                 ->execute([password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]), $id]);
         }
         flash('success', 'Customer updated.');
-        redirect(SITE_URL . '/admin/customers.php?id=' . $id);
+        redirect(asset_base() . '/admin/customers.php?id=' . $id);
     } else {
         $hash = password_hash($pass !== '' ? $pass : bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
         $pdo->prepare('INSERT INTO users (name, email, phone, address, password_hash, role, active) VALUES (?,?,?,?,?,?,?)')
             ->execute([$name, $email, $phone, $address ?: null, $hash, 'customer', $active]);
         flash('success', 'Customer added.');
-        redirect(SITE_URL . '/admin/customers.php?id=' . (int)$pdo->lastInsertId());
+        redirect(asset_base() . '/admin/customers.php?id=' . (int)$pdo->lastInsertId());
     }
-    redirect(SITE_URL . '/admin/customers.php' . ($id ? '?action=edit&id=' . $id : '?action=add'));
+    redirect(asset_base() . '/admin/customers.php' . ($id ? '?action=edit&id=' . $id : '?action=add'));
 }
 
 /* ── Toggle active ─────────────────────────── */
@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_active'])) {
     $uid = (int)$_POST['customer_id'];
     $pdo->prepare("UPDATE users SET active = 1 - active WHERE id=? AND role='customer'")->execute([$uid]);
     flash('success', 'Customer status updated.');
-    redirect(SITE_URL . '/admin/customers.php' . ((int)($_POST['back_to_view'] ?? 0) ? '?id=' . $uid : ''));
+    redirect(asset_base() . '/admin/customers.php' . ((int)($_POST['back_to_view'] ?? 0) ? '?id=' . $uid : ''));
 }
 
 /* ── Add / Edit form ───────────────────────── */
@@ -131,7 +131,7 @@ if ($viewId) {
     $st = $pdo->prepare("SELECT * FROM users WHERE id=? AND role='customer'");
     $st->execute([$viewId]);
     $c = $st->fetch();
-    if (!$c) { flash('error', 'Customer not found.'); redirect(SITE_URL . '/admin/customers.php'); }
+    if (!$c) { flash('error', 'Customer not found.'); redirect(asset_base() . '/admin/customers.php'); }
 
     $os = $pdo->prepare("SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC");
     $os->execute([$viewId]);

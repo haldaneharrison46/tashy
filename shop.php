@@ -53,9 +53,9 @@ require_once __DIR__ . '/includes/header.php';
       <aside class="filter-sidebar">
         <div class="filter-group">
           <h4 class="filter-title">Categories</h4>
-          <a href="<?= SITE_URL ?>/shop.php" class="filter-tag <?= $catSlug === '' ? 'active' : '' ?>">All</a>
+          <a href="<?= asset_base() ?>/shop.php" class="filter-tag <?= $catSlug === '' ? 'active' : '' ?>">All</a>
           <?php foreach ($categories as $c): ?>
-          <a href="<?= SITE_URL ?>/shop.php?cat=<?= h($c['slug']) ?>" class="filter-tag <?= $catSlug === $c['slug'] ? 'active' : '' ?>"><?= h($c['name']) ?></a>
+          <a href="<?= asset_base() ?>/shop.php?cat=<?= h($c['slug']) ?>" class="filter-tag <?= $catSlug === $c['slug'] ? 'active' : '' ?>"><?= h($c['name']) ?></a>
           <?php endforeach; ?>
         </div>
         <div class="filter-group" style="margin-top:24px">
@@ -66,7 +66,7 @@ require_once __DIR__ . '/includes/header.php';
           <?php endforeach; ?>
         </div>
         <?php if ($search || $catSlug || $sort || $featured): ?>
-        <div style="margin-top:20px"><a href="<?= SITE_URL ?>/shop.php" class="btn btn-outline btn-sm">Clear Filters</a></div>
+        <div style="margin-top:20px"><a href="<?= asset_base() ?>/shop.php" class="btn btn-outline btn-sm">Clear Filters</a></div>
         <?php endif; ?>
       </aside>
 
@@ -82,14 +82,14 @@ require_once __DIR__ . '/includes/header.php';
         <?php if (empty($products)): ?>
         <div class="empty-state" style="text-align:center;padding:80px 0">
           <p style="font-size:1.1rem;color:#999">No products found.</p>
-          <a href="<?= SITE_URL ?>/shop.php" class="btn btn-primary" style="margin-top:16px">Browse All</a>
+          <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary" style="margin-top:16px">Browse All</a>
         </div>
         <?php else: ?>
         <div class="product-grid" id="productGrid">
           <?php foreach ($products as $p): ?>
           <div class="product-card" data-product-id="<?= $p['id'] ?>">
             <div class="product-card-img">
-              <a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>">
+              <a href="<?= asset_base() ?>/product.php?slug=<?= h($p['slug']) ?>">
                 <img src="<?= product_img($p['image']) ?>" alt="<?= h($p['name']) ?>" loading="lazy">
               </a>
               <?php if ($p['compare_price']): ?>
@@ -104,7 +104,7 @@ require_once __DIR__ . '/includes/header.php';
             </div>
             <div class="product-card-body">
               <div class="product-brand"><?= h($p['brand']) ?></div>
-              <h3 class="product-name"><a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>"><?= h($p['name']) ?></a></h3>
+              <h3 class="product-name"><a href="<?= asset_base() ?>/product.php?slug=<?= h($p['slug']) ?>"><?= h($p['name']) ?></a></h3>
               <div class="product-footer">
                 <div class="product-price">
                   <span class="price-current"><?= money($p['price']) ?></span>

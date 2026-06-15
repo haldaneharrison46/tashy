@@ -227,14 +227,14 @@ require_once __DIR__ . '/includes/header.php';
             <?php foreach ($wishlist as $p): ?>
             <div class="product-card" data-product-id="<?= $p['id'] ?>" style="position:relative">
               <button class="fav-btn active" aria-label="Remove from wishlist" data-product-id="<?= $p['id'] ?>" onclick="toggleWishlist(this)" style="position:absolute;top:8px;right:8px;z-index:2">❤️</button>
-              <a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>">
+              <a href="<?= asset_base() ?>/product.php?slug=<?= h($p['slug']) ?>">
                 <div class="product-card-img">
-                  <img src="<?= SITE_URL ?>/assets/images/<?= h($p['image'] ?: 'placeholder.svg') ?>" alt="<?= h($p['name']) ?>" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
+                  <img src="<?= asset_base() ?>/assets/images/<?= h($p['image'] ?: 'placeholder.svg') ?>" alt="<?= h($p['name']) ?>" loading="lazy" style="width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px">
                 </div>
               </a>
               <div class="product-card-body" style="padding-top:10px">
                 <div class="product-brand" style="font-size:.78rem;color:#999"><?= h($p['brand']) ?></div>
-                <h3 class="product-name" style="font-size:.92rem;margin:2px 0 6px"><a href="<?= SITE_URL ?>/product.php?slug=<?= h($p['slug']) ?>" style="color:inherit;text-decoration:none"><?= h($p['name']) ?></a></h3>
+                <h3 class="product-name" style="font-size:.92rem;margin:2px 0 6px"><a href="<?= asset_base() ?>/product.php?slug=<?= h($p['slug']) ?>" style="color:inherit;text-decoration:none"><?= h($p['name']) ?></a></h3>
                 <span class="price-current" style="font-weight:700"><?= money($p['price']) ?></span>
                 <button class="quick-add-btn btn btn-primary btn-sm" style="margin-top:8px;width:100%" onclick="addToCart(<?= $p['id'] ?>, this)">Add to Cart</button>
               </div>

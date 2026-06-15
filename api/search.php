@@ -61,7 +61,7 @@ $results = array_map(function($r) {
         'compare_price' => $r['compare_price'] ? (float)$r['compare_price'] : null,
         'image'         => product_img($r['image']),
         'category'      => $r['category'],
-        'url'           => SITE_URL . '/product.php?slug=' . urlencode($r['slug']),
+        'url'           => asset_base() . '/product.php?slug=' . urlencode($r['slug']),
     ];
 }, $rows);
 
