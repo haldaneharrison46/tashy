@@ -69,11 +69,13 @@ jobs:
           echo "== verify on server: SITE_URL line + php -l =="
           $SSH "grep -n \"define('SITE_URL'\" config/db.php; php -l config/db.php 2>&1 || echo 'php CLI unavailable'"
 
-          echo "== curl live default URL =="
-          CODE=$(curl -s -o /tmp/page.html -w '%{http_code}' "$VERIFY_URL/index.php" || echo 000)
-          echo "HTTP_STATUS=$CODE"
-          echo "DB_ERROR_HITS=$(grep -c 'Database connection failed' /tmp/page.html || true)"
-          echo "STYLESHEET_HITS=$(grep -c 'assets/css/style.css' /tmp/page.html || true)"
-          echo "IMAGE_HITS=$(grep -c 'assets/images/' /tmp/page.html || true)"
-          echo "--- first 20 lines of rendered HTML ---"
-          head -20 /tmp/page.html
+          echo "== probe staging URL (status + server header) =="
+          for path in / /index.php /assets/css/style.css /robots.txt; do
+            line=$(curl -sS -o /dev/null -w 'HTTP=%{http_code} type=%{content_type}' "$VERIFY_URL$path" 2>&1 || echo "curl-failed")
+            srv=$(curl -sSI "$VERIFY_URL$path" 2>/dev/null | grep -i '^server:' | head -1)
+            echo "  $path -> $line  $srv"
+          done
+          echo "== DB reachability from runner (PDO connect) =="
+          php -r '$h=getenv("TK_DB_HOST");$n=getenv("TK_DB_NAME");$u=getenv("TK_DB_USER");$p=getenv("TK_DB_PASS"); try { new PDO("mysql:host=$h;dbname=$n",$u,$p,[PDO::ATTR_TIMEOUT=>10]); echo "DB_CONNECT=OK\n"; } catch (Throwable $e) { echo "DB_CONNECT=FAIL: ".$e->getMessage()."\n"; }'
+          echo "== index.php fetch (first 15 lines) =="
+          curl -s "$VERIFY_URL/index.php" | head -15
