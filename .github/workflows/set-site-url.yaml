@@ -68,6 +68,10 @@ jobs:
           curl -ksSI --connect-timeout 20 https://tashykollections.com/ 2>&1 | grep -iE '^HTTP/|^server:' | head -3 || true
           echo "  -- new webspace staging PHP now? --"
           echo "  staging /index.php -> $(curl -sS -o /dev/null -w '%{http_code}' --connect-timeout 20 https://home-5020640214.app-ionos.space/index.php 2>/dev/null)"
+          echo "  -- IP comparison (is .com pointing at the Deploy Now webspace yet?) --"
+          echo "  tashykollections.com      -> $(getent ahostsv4 tashykollections.com | awk '{print $1}' | sort -u | tr '\n' ' ')"
+          echo "  home-5020640214 (new)     -> $(getent ahostsv4 home-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
+          echo "  access-5020640214 (new)   -> $(getent ahostsv4 access-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
           echo "  DB error on page?   : $(grep -c 'Database connection failed' /tmp/p.html || true)"
           echo "  stylesheet present? : $(grep -c 'assets/css/style.css' /tmp/p.html || true)"
           echo "  images present?     : $(grep -c 'assets/images/' /tmp/p.html || true)"
