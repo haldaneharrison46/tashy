@@ -30,6 +30,27 @@ function site_origin(): string {
     return $origin;
 }
 
+// ── Asset base (filesystem-derived, sub-folder aware) ─────────
+// Root-relative URL prefix to the app root: '' at the web root, '/tashy' in a
+// sub-folder. Computed from where the app actually lives on disk relative to
+// DOCUMENT_ROOT — so on-page asset URLs (images, etc.) resolve same-origin
+// regardless of whether SITE_URL is correct. Falls back to the SITE_URL path
+// (base_path) if the filesystem comparison can't be made.
+function asset_base(): string {
+    static $base = null;
+    if ($base !== null) return $base;
+    $appRoot = realpath(__DIR__ . '/..');                       // app root (parent of includes/)
+    $docRoot = !empty($_SERVER['DOCUMENT_ROOT']) ? realpath($_SERVER['DOCUMENT_ROOT']) : false;
+    if ($appRoot && $docRoot) {
+        $appRoot = str_replace('\\', '/', $appRoot);
+        $docRoot = str_replace('\\', '/', rtrim($docRoot, '/'));
+        if (strpos($appRoot, $docRoot) === 0) {
+            return $base = rtrim(substr($appRoot, strlen($docRoot)), '/');
+        }
+    }
+    return $base = base_path();
+}
+
 // ── Output escaping ───────────────────────────────────────────
 function h(string $s): string {
     return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -265,7 +286,9 @@ function jamaica_parishes(): array {
 // ── Image path helper ─────────────────────────────────────────
 function product_img(string $img = '', string $fallback = 'placeholder.svg'): string {
     if (preg_match('~^https?://~i', $img)) return $img;   // allow full URLs
-    return SITE_URL . '/assets/images/' . ($img ?: $fallback);
+    // Same-origin, sub-folder aware: resolves correctly at the web root or under
+    // /tashy and doesn't break when SITE_URL's host is misconfigured.
+    return asset_base() . '/assets/images/' . ($img ?: $fallback);
 }
 
 // ── Product gallery images (uploaded extras) ──────────────────

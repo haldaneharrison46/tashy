@@ -8,7 +8,7 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- ░░ HERO ░░ -->
-<section class="hero-home" style="background-image:url('<?= SITE_URL ?>/assets/images/hero-home.jpg')">
+<section class="hero-home" style="background-image:url('<?= asset_base() ?>/assets/images/hero-home.jpg')">
   <div class="container">
     <div class="hero-home-text">
       <p class="hero-eyebrow">Falmouth · Trelawny · Jamaica</p>
