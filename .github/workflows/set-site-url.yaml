@@ -1,10 +1,11 @@
-name: "Maintenance: Set SITE_URL on server"
+name: "Maintenance: Provision config / set SITE_URL on Deploy Now webspace"
 
-# One-off maintenance task: corrects the SITE_URL constant in the live
-# config/db.php on the .com webspace, using the same SSH key the Deploy Now
-# pipeline uses. Read-only inspection by default; pass apply=true to write.
-# Never prints the whole config (which holds DB credentials) — only the
-# SITE_URL line(s).
+# One-off maintenance task for the Deploy Now webspace
+# (access-5020640214.app-ionos.space). Read-only by default; with apply=true it
+# ensures config/db.php exists (created from repo secrets, SITE_URL from input,
+# or its SITE_URL line updated if already present), syntax-checks it, then
+# curls the live default URL to confirm the page renders and the DB connects.
+# DB credentials come from secrets and are masked in logs.
 
 on:
   workflow_dispatch:
@@ -15,14 +16,24 @@ on:
         default: "https://tashykollections.com"
         type: string
       apply:
-        description: "Actually write the change (otherwise inspect only)"
+        description: "Actually write config/db.php (otherwise inspect only)"
         required: true
         default: false
         type: boolean
 
 jobs:
-  set-site-url:
+  provision:
     runs-on: ubuntu-latest
+    env:
+      SSH_HOST: access-5020640214.app-ionos.space
+      SSH_USER: ${{ secrets.IONOS_DEPLOYMENT_BD4FC25F_E6A4_41D5_A436_924D7AEFB14B_SSH_USERNAME }}
+      SITE_URL: ${{ inputs.site_url }}
+      APPLY: ${{ inputs.apply }}
+      VERIFY_URL: "https://home-5020640214.app-ionos.space"
+      TK_DB_HOST: ${{ secrets.TK_DB_HOST }}
+      TK_DB_NAME: ${{ secrets.TK_DB_NAME }}
+      TK_DB_USER: ${{ secrets.TK_DB_USER }}
+      TK_DB_PASS: ${{ secrets.TK_DB_PASS }}
     steps:
       - name: Set up SSH key
         run: |
@@ -30,46 +41,64 @@ jobs:
           printf '%s\n' "${{ secrets.IONOS_SSH_KEY }}" > ~/.ssh/id_ionos
           chmod 600 ~/.ssh/id_ionos
 
-      - name: Inspect / edit SITE_URL over SSH
-        env:
-          SSH_HOST: access-5020640214.app-ionos.space
-          SSH_USER: ${{ secrets.IONOS_DEPLOYMENT_BD4FC25F_E6A4_41D5_A436_924D7AEFB14B_SSH_USERNAME }}
-          SITE_URL: ${{ inputs.site_url }}
-          APPLY: ${{ inputs.apply }}
+      - name: Provision / verify
         run: |
           set -e
-          SSH="ssh -i ~/.ssh/id_ionos -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=25 $SSH_USER@$SSH_HOST"
+          SSHOPTS="-i ~/.ssh/id_ionos -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o BatchMode=yes -o ConnectTimeout=25"
+          SSH="ssh $SSHOPTS $SSH_USER@$SSH_HOST"
 
           echo "== whoami / pwd =="
           $SSH 'whoami; pwd'
 
-          echo "== htdocs listing =="
-          $SSH 'ls -la; echo "---"; ls -la config 2>/dev/null || echo "(no config dir)"'
+          echo "== current state of config/db.php (SITE_URL line only) =="
+          $SSH "test -f config/db.php && grep -n \"define('SITE_URL'\" config/db.php || echo '(no config/db.php yet)'"
 
-          echo "== is OUR code here? (asset_base marker + index head) =="
-          $SSH 'echo "index.php exists:"; ls -la index.php 2>/dev/null; echo "asset_base hits in includes/functions.php:"; grep -c "function asset_base" includes/functions.php 2>/dev/null; echo "asset_base hits in index.php:"; grep -c "asset_base" index.php 2>/dev/null'
+          if [ "$APPLY" != "true" ]; then echo "Inspect only. Re-run with apply=true to write."; exit 0; fi
 
-          echo "== find any db.php =="
-          $SSH 'find . -maxdepth 3 -name db.php 2>/dev/null; find "$HOME" -maxdepth 5 -name db.php 2>/dev/null | head'
+          echo "== building config/db.php locally (creds masked) =="
+          {
+            printf "<?php\n"
+            printf "define('DB_HOST',    '%s');\n" "$TK_DB_HOST"
+            printf "define('DB_NAME',    '%s');\n" "$TK_DB_NAME"
+            printf "define('DB_USER',    '%s');\n" "$TK_DB_USER"
+            printf "define('DB_PASS',    '%s');\n" "$TK_DB_PASS"
+            printf "define('DB_CHARSET', 'utf8mb4');\n"
+            printf "define('SITE_NAME',  'Tashy Kollections');\n"
+            printf "define('SITE_URL',   '%s');\n" "$SITE_URL"
+            printf "define('SITE_EMAIL', 'hello@tashykollections.com');\n"
+            printf "define('SITE_ADDRESS', '37 Cornwall Street, Falmouth, Trelawny, Jamaica');\n"
+            printf "define('CURRENCY',   'JMD');\n"
+            printf "define('CURRENCY_SYMBOL', 'J\$');\n"
+            printf "define('TAX_RATE',   0.15);\n"
+            printf "define('FREE_SHIPPING_THRESHOLD', 5000);\n"
+            cat <<'PHPEOF'
+function db(): PDO {
+    static $pdo = null;
+    if ($pdo === null) {
+        $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
+        $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, PDO::ATTR_EMULATE_PREPARES => false];
+        try { $pdo = new PDO($dsn, DB_USER, DB_PASS, $options); }
+        catch (PDOException $e) { die(json_encode(['error' => 'Database connection failed.'])); }
+    }
+    return $pdo;
+}
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
+PHPEOF
+          } > /tmp/db.php
 
-          echo "== locate config/db.php =="
-          # Resolve the config path: try common locations, fall back to find under the home dir.
-          REMOTE_FIND='for p in config/db.php httpdocs/config/db.php /var/www/vhosts/tashykollections.com/httpdocs/config/db.php "$HOME/httpdocs/config/db.php"; do if [ -f "$p" ]; then echo "$p"; exit 0; fi; done; find "$HOME" -maxdepth 4 -path "*/config/db.php" 2>/dev/null | head -1'
-          CONFIG=$($SSH "$REMOTE_FIND")
-          echo "CONFIG PATH: [$CONFIG]"
-          if [ -z "$CONFIG" ]; then echo "::error::Could not locate config/db.php"; exit 1; fi
+          echo "== uploading to webspace (config/db.php) =="
+          $SSH 'mkdir -p config'
+          scp $SSHOPTS /tmp/db.php "$SSH_USER@$SSH_HOST:config/db.php"
+          rm -f /tmp/db.php
 
-          echo "== current SITE_URL line (DB creds NOT printed) =="
-          $SSH "grep -n \"define('SITE_URL'\" '$CONFIG' || echo 'no SITE_URL line found'"
+          echo "== verify on server: SITE_URL line + php -l =="
+          $SSH "grep -n \"define('SITE_URL'\" config/db.php; php -l config/db.php 2>&1 || echo 'php CLI unavailable'"
 
-          if [ "$APPLY" = "true" ]; then
-            echo "== applying: SITE_URL -> $SITE_URL =="
-            $SSH "cp '$CONFIG' '$CONFIG.bak' && sed -i \"s#^[[:space:]]*define('SITE_URL'.*#define('SITE_URL',   '$SITE_URL');#\" '$CONFIG'"
-            echo "== new SITE_URL line =="
-            $SSH "grep -n \"define('SITE_URL'\" '$CONFIG'"
-            echo "== php -l (syntax check) =="
-            $SSH "php -l '$CONFIG' 2>&1 || command -v php8.2 >/dev/null && php8.2 -l '$CONFIG' 2>&1 || echo 'php CLI not available — skipped'"
-            echo "== backup saved at: $CONFIG.bak =="
-          else
-            echo "Inspection only. Re-run with apply=true to write the change."
-          fi
+          echo "== curl the live default URL to confirm render + DB =="
+          CODE=$(curl -s -o /tmp/page.html -w '%{http_code}' "$VERIFY_URL/index.php" || echo "000")
+          echo "HTTP: $CODE"
+          echo "DB error present? : $(grep -c 'Database connection failed' /tmp/page.html || true)"
+          echo "stylesheet link?  : $(grep -c 'assets/css/style.css' /tmp/page.html || true)"
+          echo "product/hero img? : $(grep -c 'assets/images/' /tmp/page.html || true)"
+          echo "--- first 25 lines of rendered HTML ---"
+          head -25 /tmp/page.html
