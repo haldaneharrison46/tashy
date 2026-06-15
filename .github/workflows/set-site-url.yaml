@@ -65,6 +65,10 @@ jobs:
           echo "  config/db.php SITE_URL on Deploy Now webspace: $($SSH "grep \"define('SITE_URL'\" config/db.php" 2>/dev/null)"
           echo "  Deploy Now webspace IP (home-5020640214) = $(getent ahostsv4 home-5020640214.app-ionos.space | awk '{print $1}' | sort -u | tr '\n' ' ')"
           echo "  (old webspace was 74.208.236.55)"
+          echo "  == are STATIC assets on 74.208.236.55 my NEW versions? =="
+          echo "    style.css filter-title (new): $(curl -s -H 'Host: tashykollections.com' http://74.208.236.55/assets/css/style.css 2>/dev/null | grep -c 'filter-title')"
+          echo "    main.js softpink theme (new): $(curl -s -H 'Host: tashykollections.com' http://74.208.236.55/assets/js/main.js 2>/dev/null | grep -c 'softpink')"
+          echo "    main.js bytes: $(curl -s -H 'Host: tashykollections.com' http://74.208.236.55/assets/js/main.js 2>/dev/null | wc -c)"
           echo "  == where did my SFTP deploy land vs where .com serves =="
           echo "  access-5020587559 resolves to: $(getent ahosts access-5020587559.webspace-host.com | awk '{print $1}' | sort -u | tr '\n' ' ')"
           for ip in 74.208.236.55 '[2607:f1c0:100f:f000::200]'; do
