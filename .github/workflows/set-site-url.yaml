@@ -77,4 +77,4 @@ jobs:
           done
           echo "== DB reachability FROM the webspace (the test that matters) =="
           scp $SSHOPTS .github/deploy/dbtest.php "$SSH_USER@$SSH_HOST:dbtest.php"
-          $SSH 'P=$(command -v php || command -v php8.3 || command -v php8.2 || command -v php8.1 || ls /usr/bin/php* 2>/dev/null | head -1); echo "PHP_CLI=$P"; if [ -n "$P" ]; then "$P" dbtest.php; else echo "NO_PHP_CLI (cannot test from shell)"; fi; rm -f dbtest.php'
+          $SSH 'echo "php binaries:"; ls -1 /usr/bin/php* 2>/dev/null; P=/usr/bin/php; echo "--- run via -q -f ---"; "$P" -q -f dbtest.php 2>&1; echo "--- exit=$? ---"; rm -f dbtest.php'
