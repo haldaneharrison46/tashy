@@ -1,0 +1,24 @@
+name: "Maintenance: fetch barcode/QR libs"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download libraries
+        run: |
+          mkdir -p vendor
+          curl -sSL "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js" -o vendor/jsbarcode.min.js
+          curl -sSL "https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js" -o vendor/qrcode.min.js
+          echo "== sizes =="; wc -c vendor/*
+          echo "== jsbarcode head =="; head -c 120 vendor/jsbarcode.min.js; echo
+          echo "== qrcode head =="; head -c 120 vendor/qrcode.min.js; echo
+          echo "== sanity: expected globals present? =="
+          grep -c "JsBarcode" vendor/jsbarcode.min.js
+          grep -c "qrcode" vendor/qrcode.min.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: barcode-qr-libs
+          path: vendor/
