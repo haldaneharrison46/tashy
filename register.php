@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     else {
         $result = register_user($name, $email, $password, $phone);
         if ($result['ok']) {
-            flash('success', 'Account created! Welcome to Tashy Kollections.');
+            flash('success', 'Account created! Welcome to ' . SITE_NAME . '.');
             redirect(asset_base() . '/account.php');
         }
         $error = $result['error'];
@@ -37,7 +37,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="auth-card" style="background:var(--white);border:1px solid var(--grey-light);border-radius:16px;padding:40px">
       <div style="text-align:center;margin-bottom:22px"><?= tk_logo(200) ?></div>
       <h1 style="font-size:1.6rem;margin-bottom:6px">Create Account</h1>
-      <p style="color:#888;margin-bottom:28px">Join Tashy Kollections — exclusive deals await.</p>
+      <p style="color:#888;margin-bottom:28px">Join <?= h(SITE_NAME) ?> — exclusive deals await.</p>
 
       <?php if ($error): ?>
       <div class="form-error" style="background:#fef2f2;border:1px solid #fca5a5;color:#c0392b;padding:12px 16px;border-radius:8px;margin-bottom:20px"><?= h($error) ?></div>

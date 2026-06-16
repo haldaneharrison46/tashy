@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 $pageTitle = 'Policies | ' . SITE_NAME;
-$metaDesc  = 'Shipping, returns, privacy, and terms for Tashy Kollections — Falmouth, Trelawny, Jamaica.';
+$metaDesc  = 'Shipping, returns, privacy, and terms for ' . SITE_NAME . ' — Falmouth, Trelawny, Jamaica.';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -55,7 +55,7 @@ require_once __DIR__ . '/includes/header.php';
           original packaging.
         </p>
         <p>
-          For hygiene and safety reasons, opened bedding, bath linens, and personal-care items cannot be returned
+          For hygiene and safety reasons, <?= sk('opened bedding, bath linens, and personal-care items', 'opened cosmetics, hair, skin and personal-care items') ?> cannot be returned
           unless they arrived damaged or defective. If you receive a damaged or incorrect item, contact us within
           48 hours of delivery and we'll make it right — at no cost to you.
         </p>
@@ -89,7 +89,7 @@ require_once __DIR__ . '/includes/header.php';
         <p>
           We make every effort to display products and colours accurately, but actual appearance may vary slightly.
           All products are intended for personal use as directed; please review ingredient lists and patch-test
-          where appropriate. Tashy Kollections is not liable for misuse of products or for individual reactions.
+          where appropriate. <?= h(SITE_NAME) ?> is not liable for misuse of products or for individual reactions.
         </p>
         <p>
           Orders are subject to acceptance and availability. In the rare event an item is out of stock after you

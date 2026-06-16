@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
 $pageTitle = 'About Us | ' . SITE_NAME;
-$metaDesc  = 'Tashy Kollections — home décor, bedding, mats & fragrances, based in Falmouth, Trelawny. Curated pieces, honest advice, island-wide delivery.';
+$metaDesc  = sk('Tashy Kollections — home décor, bedding, mats & fragrances, based in Falmouth, Trelawny. Curated pieces, honest advice, island-wide delivery.',
+                SITE_NAME . ' — hair care, skin care, makeup, nails & beauty tools. Quality beauty supplies, honest advice, island-wide delivery in Jamaica.');
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -10,8 +11,9 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <div class="text-center" style="max-width:720px;margin:0 auto 3rem">
       <span class="policy-tag">Our Story</span>
-      <h1 class="section-title">Pieces That Make Your House a Home</h1>
-      <p class="section-sub">Tashy Kollections is a Jamaican home destination curating premium bedding, kitchen &amp; bath, mats, gift sets &amp; signature fragrances — chosen with real care and an eye for detail.</p>
+      <h1 class="section-title"><?= sk('Pieces That Make Your House a Home', 'Beauty Supplies You Can Trust') ?></h1>
+      <p class="section-sub"><?= sk(h(SITE_NAME) . ' is a Jamaican home destination curating premium bedding, kitchen &amp; bath, mats, gift sets &amp; signature fragrances — chosen with real care and an eye for detail.',
+                                    h(SITE_NAME) . ' is a Jamaican beauty destination stocking hair care, skin care, makeup, nails &amp; the tools to match — trusted brands, chosen with real care.') ?></p>
     </div>
 
     <div class="about-story">
@@ -20,8 +22,22 @@ require_once __DIR__ . '/includes/header.php';
       </div>
       <div>
         <h2 style="margin-bottom:16px">Rooted in Falmouth, serving all of Jamaica</h2>
+        <?php if (store_kind() === 'beauty'): ?>
         <p style="margin-bottom:14px;line-height:1.75;color:var(--grey-dark)">
-          From our home at 37 Cornwall Street in historic Falmouth, Trelawny, Tashy Kollections began with a simple belief:
+          From our home at 37 Cornwall Street in historic Falmouth, Trelawny, <?= h(SITE_NAME) ?> began with a simple belief:
+          everyone deserves quality beauty products and honest advice — without the markup or the guesswork.
+        </p>
+        <p style="margin-bottom:14px;line-height:1.75;color:var(--grey-dark)">
+          We hand-pick every brand we carry, from salon favourites to everyday essentials.
+          No knock-offs, no compromises — just genuine hair, skin, makeup and nail products our community can trust.
+        </p>
+        <p style="line-height:1.75;color:var(--grey-dark)">
+          Whether you're a pro stylist stocking your kit or refreshing your own routine,
+          our team is here with honest, expert advice every step of the way.
+        </p>
+        <?php else: ?>
+        <p style="margin-bottom:14px;line-height:1.75;color:var(--grey-dark)">
+          From our home at 37 Cornwall Street in historic Falmouth, Trelawny, <?= h(SITE_NAME) ?> began with a simple belief:
           every Jamaican home deserves beautiful, well-made pieces that turn an ordinary room into a space that
           <em>speaks for itself</em>.
         </p>
@@ -33,6 +49,7 @@ require_once __DIR__ . '/includes/header.php';
           Whether you're refreshing the bedroom, styling a living space, or finding your home's signature scent,
           our team is here with honest, expert advice every step of the way.
         </p>
+        <?php endif; ?>
         <a href="<?= asset_base() ?>/shop.php" class="btn btn-primary" style="margin-top:24px">Shop the Collection</a>
       </div>
     </div>
@@ -53,9 +70,9 @@ require_once __DIR__ . '/includes/header.php';
         <p>Every product is sourced from authorised suppliers — guaranteed genuine, every single time.</p>
       </div>
       <div class="value-card">
-        <div class="icon">🏠</div>
-        <h4>Curated for Your Home</h4>
-        <p>Every piece is chosen to look beautiful and live well — from restful bedding to statement rugs.</p>
+        <div class="icon"><?= sk('🏠', '✨') ?></div>
+        <h4><?= sk('Curated for Your Home', 'Curated for You') ?></h4>
+        <p><?= sk('Every piece is chosen to look beautiful and live well — from restful bedding to statement rugs.', 'Every product is chosen to perform — from salon-grade hair care to everyday skin essentials.') ?></p>
       </div>
       <div class="value-card">
         <div class="icon">🚚</div>
@@ -85,7 +102,7 @@ require_once __DIR__ . '/includes/header.php';
 <section class="wholesale-hero">
   <div class="container">
     <h2 style="color:var(--white);margin-bottom:12px">Style that <span>delivers</span>.</h2>
-    <p>Join the growing community styling their homes with Tashy Kollections.</p>
+    <p><?= sk('Join the growing community styling their homes with ' . h(SITE_NAME) . '.', 'Join the growing community shopping beauty with ' . h(SITE_NAME) . '.') ?></p>
     <div class="stat-row">
       <div class="stat-item"><strong>500+</strong><span>Curated Products</span></div>
       <div class="stat-item"><strong>14</strong><span>Parishes Served</span></div>

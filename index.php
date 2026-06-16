@@ -1,7 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/functions.php';
-$pageTitle = 'Tashy Kollections — Home Decor & Fragrances, Falmouth Jamaica';
-$metaDesc  = 'Tashy Kollections — bedding, comforters, mats, kitchen & bath, and fragrances for men & women. Making statements, one space at a time. Based in Falmouth, Trelawny, Jamaica with island-wide delivery and local pickup.';
+$pageTitle = SITE_NAME . sk(' — Home Decor & Fragrances, Falmouth Jamaica', ' — Beauty Supplies & Cosmetics, Jamaica');
+$metaDesc  = sk('Tashy Kollections — bedding, comforters, mats, kitchen & bath, and fragrances for men & women. Making statements, one space at a time. Based in Falmouth, Trelawny, Jamaica with island-wide delivery and local pickup.',
+                SITE_NAME . ' — hair care, skin care, makeup, nails, tools & beauty essentials. Quality beauty supplies with island-wide delivery and local pickup in Jamaica.');
 
 $featuredProducts = get_products(['featured' => true, 'limit' => 8]);
 require_once __DIR__ . '/includes/header.php';
@@ -12,8 +13,13 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <div class="hero-home-text">
       <p class="hero-eyebrow">★ Free Island-Wide Delivery over J$5,000</p>
+      <?php if (store_kind() === 'beauty'): ?>
+      <h1>Look Your Best. <span>Every Day.</span></h1>
+      <p>Hair care, skin care, makeup, nails &amp; the tools to match — quality beauty supplies at honest prices. Stock up and <strong>glow on.</strong></p>
+      <?php else: ?>
       <h1>Upgrade Every Room. <span>Starting Today.</span></h1>
       <p>Premium bedding, mats, bath essentials &amp; signature fragrances — curated to transform your space. Don't just decorate. <strong>Make a statement.</strong></p>
+      <?php endif; ?>
       <div class="hero-home-ctas">
         <a href="<?= asset_base() ?>/shop.php?featured=1" class="btn btn-primary btn-lg">Shop Best Sellers</a>
         <a href="<?= asset_base() ?>/shop.php?sort=new" class="btn btn-outline-white btn-lg">New Arrivals</a>
@@ -41,23 +47,22 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <div class="text-center" style="margin-bottom:2.5rem">
       <h2 class="section-title">Shop by Collection</h2>
-      <p class="section-sub">Everything you need to style every corner of your home.</p>
+      <p class="section-sub"><?= sk('Everything you need to style every corner of your home.', 'Everything you need to look and feel your best.') ?></p>
     </div>
     <div class="collection-grid">
       <?php
-        $collections = [
-          ['icon' => '🛏️', 'name' => 'Bedding',          'slug' => 'bedding',      'desc' => 'Sheets, duvets, comforters &amp; pillows for restful nights.'],
-          ['icon' => '🛁', 'name' => 'Kitchen &amp; Bath', 'slug' => 'kitchen-bath', 'desc' => 'Towels, robes, and finishing touches for everyday spaces.'],
-          ['icon' => '🧶', 'name' => 'Mats &amp; Rugs',    'slug' => 'mats-rugs',    'desc' => 'Soft underfoot, statement on top — for any room.'],
-          ['icon' => '🕯️', 'name' => 'Fragrances',       'slug' => 'fragrances',   'desc' => 'Signature scents &amp; home fragrance for him &amp; her.'],
-          ['icon' => '🎁', 'name' => 'Gift Sets',         'slug' => 'gift-sets',    'desc' => 'Beautifully bundled — ready to give, easy to love.'],
+        // Driven by the store's own categories, so each site shows its own.
+        $catIcons = [
+          'bedding'=>'🛏️','kitchen-bath'=>'🛁','mats-rugs'=>'🧶','fragrances'=>'🕯️','gift-sets'=>'🎁',
+          'hair-care'=>'💇🏽‍♀️','skin-care'=>'🧴','makeup'=>'💄','nails'=>'💅','tools-accessories'=>'🪮','wigs-extensions'=>'👩🏽‍🦱',
         ];
-        foreach ($collections as $c):
+        foreach (get_categories() as $c):
+          $icon = $catIcons[$c['slug']] ?? '🛍️';
       ?>
       <a href="<?= asset_base() ?>/shop.php?cat=<?= h($c['slug']) ?>" class="collection-card">
-        <div class="cc-icon"><?= $c['icon'] ?></div>
-        <h3><?= $c['name'] ?></h3>
-        <p><?= $c['desc'] ?></p>
+        <div class="cc-icon"><?= $icon ?></div>
+        <h3><?= h($c['name']) ?></h3>
+        <p><?= h($c['description'] ?? '') ?></p>
         <span class="cc-link">Shop now
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </span>
@@ -116,6 +121,15 @@ require_once __DIR__ . '/includes/header.php';
 <section class="section">
   <div class="container">
     <div class="wholesale-banner">
+      <?php if (store_kind() === 'beauty'): ?>
+      <div class="wholesale-banner-text">
+        <h2>Find your <span>perfect shade</span></h2>
+        <p>Explore makeup, skin care and hair essentials — trusted brands and pro-quality picks for every look and every routine.</p>
+      </div>
+      <div class="wholesale-banner-cta">
+        <a href="<?= asset_base() ?>/shop.php?cat=makeup" class="btn btn-primary btn-lg">Shop Makeup</a>
+      </div>
+      <?php else: ?>
       <div class="wholesale-banner-text">
         <h2>Discover your <span>signature scent</span></h2>
         <p>Explore our curated fragrance collection — candles, diffusers and eau de parfum for him, for her, and for your home.</p>
@@ -123,6 +137,7 @@ require_once __DIR__ . '/includes/header.php';
       <div class="wholesale-banner-cta">
         <a href="<?= asset_base() ?>/shop.php?cat=fragrances" class="btn btn-primary btn-lg">Shop Fragrances</a>
       </div>
+      <?php endif; ?>
     </div>
   </div>
 </section>
@@ -132,8 +147,9 @@ require_once __DIR__ . '/includes/header.php';
   <div class="container">
     <div class="statement">
       <span class="statement-mark">&ldquo;</span>
-      <h2>Making statements, one space at a time</h2>
-      <p>From the heart of Falmouth, Trelawny, Tashy Kollections curates bedding, home essentials, and fragrances that turn a house into a statement. Thoughtfully sourced, beautifully made, and delivered across all 14 parishes of Jamaica.</p>
+      <h2><?= sk('Making statements, one space at a time', 'Beauty essentials you can count on') ?></h2>
+      <p><?= sk('From the heart of Falmouth, Trelawny, ' . h(SITE_NAME) . ' curates bedding, home essentials, and fragrances that turn a house into a statement. Thoughtfully sourced, beautifully made, and delivered across all 14 parishes of Jamaica.',
+                h(SITE_NAME) . ' brings you quality hair care, skin care, makeup and beauty tools at honest prices — trusted brands and pro-quality picks, delivered across all 14 parishes of Jamaica.') ?></p>
       <a href="<?= asset_base() ?>/about.php" class="btn btn-outline" style="margin-top:26px">Read Our Story</a>
     </div>
   </div>

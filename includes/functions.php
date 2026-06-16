@@ -59,6 +59,11 @@ function brand_wordmark(): string { $v = trim((string)get_setting('brand_name', 
 function brand_subtitle(): string { $v = get_setting('brand_subtitle', 'KOLLECTIONS'); return $v === null ? 'KOLLECTIONS' : $v; }
 function brand_monogram(): string { $v = trim((string)get_setting('brand_monogram', 'T')); return $v !== '' ? mb_substr($v, 0, 1) : 'T'; }
 
+// Store kind drives the site's marketing copy. 'home' = Tashy home décor
+// (default), 'beauty' = Shanshan Beauty Supplies. sk() picks the variant.
+function store_kind(): string { return get_setting('store_kind', 'home') === 'beauty' ? 'beauty' : 'home'; }
+function sk(string $home, string $beauty): string { return store_kind() === 'beauty' ? $beauty : $home; }
+
 // Returns the brand logo as inline SVG, scaled to $width. The wordmark uses
 // currentColor so it adapts to its context (dark admin sidebar, light header);
 // the emblem + subtitle stay rose-gold. Font sizes auto-fit longer names.

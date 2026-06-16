@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = 'Contact Us | ' . SITE_NAME;
-$metaDesc  = 'Get in touch with Tashy Kollections — visit us at 37 Cornwall Street, Falmouth, Trelawny, Jamaica, or send us a message.';
+$metaDesc  = 'Get in touch with ' . SITE_NAME . ' — visit us at 37 Cornwall Street, Falmouth, Trelawny, Jamaica, or send us a message.';
 require_once __DIR__ . '/includes/header.php';
 ?>
 
@@ -127,7 +127,7 @@ require_once __DIR__ . '/includes/header.php';
     <!-- Map -->
     <div style="margin-top:48px;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)">
       <iframe
-        title="Tashy Kollections — 37 Cornwall Street, Falmouth"
+        title="<?= h(SITE_NAME) ?> — 37 Cornwall Street, Falmouth"
         src="https://www.google.com/maps?q=37+Cornwall+Street,+Falmouth,+Trelawny,+Jamaica&output=embed"
         width="100%" height="380" style="border:0;display:block" loading="lazy"
         referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
