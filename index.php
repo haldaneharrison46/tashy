@@ -10,32 +10,43 @@ require_once __DIR__ . '/includes/header.php';
 ?>
 
 <!-- ░░ HERO ░░ -->
-<section class="hero-home" style="background-image:url('<?= asset_base() ?>/assets/images/hero-home.jpg')">
+<?php
+  $heroImg = trim((string) get_setting('hero_image', ''));
+  $heroBg  = $heroImg !== '' ? (preg_match('~^https?://~i', $heroImg) ? $heroImg : product_img($heroImg)) : asset_base() . '/assets/images/hero-home.jpg';
+  $weekly  = trim((string) get_setting('weekly_special', ''));
+?>
+<section class="hero-home" style="background-image:url('<?= h($heroBg) ?>')">
   <div class="container">
     <div class="hero-home-text">
-      <p class="hero-eyebrow">★ Free Island-Wide Delivery over J$5,000</p>
+      <p class="hero-eyebrow">★ <?= sk('Free Island-Wide Delivery over ', 'Free Island-Wide Delivery over ', 'Free Shipping over ') . money(free_shipping_threshold()) ?></p>
+      <?php if ($weekly !== ''): ?>
+      <div class="hero-weekly">🔥 <strong>Weekly Special</strong> — <?= h($weekly) ?></div>
+      <?php endif; ?>
       <?php if (store_kind() === 'beauty'): ?>
       <h1>Look Your Best. <span>Every Day.</span></h1>
       <p>Hair care, skin care, makeup, nails &amp; the tools to match — quality beauty supplies at honest prices. Stock up and <strong>glow on.</strong></p>
       <?php elseif (store_kind() === 'luxe'): ?>
       <h1>Carry the Look. <span>Own the Moment.</span></h1>
-      <p>Handbags, dresses, colognes, footwear &amp; the finishing touches — curated style and beauty, delivered to your door. <strong>Elevate the everyday.</strong></p>
+      <p>Handbags, dresses, colognes, footwear &amp; the finishing touches — curated style, delivered to your door. <strong>Elevate the everyday.</strong></p>
       <?php else: ?>
       <h1>Upgrade Every Room. <span>Starting Today.</span></h1>
       <p>Premium bedding, mats, bath essentials &amp; signature fragrances — curated to transform your space. Don't just decorate. <strong>Make a statement.</strong></p>
       <?php endif; ?>
       <div class="hero-home-ctas">
-        <a href="<?= asset_base() ?>/shop.php?featured=1" class="btn btn-primary btn-lg">Shop Best Sellers</a>
+        <a href="<?= asset_base() ?>/shop.php?featured=1" class="btn btn-primary btn-lg"><?= sk('Shop Best Sellers', 'Shop Best Sellers', 'Shop the Collection') ?></a>
         <a href="<?= asset_base() ?>/shop.php?sort=new" class="btn btn-outline-white btn-lg">New Arrivals</a>
+        <?php if (setting_bool('call_to_order') && store_phone_e164() !== ''): ?>
+        <a href="tel:+<?= h(store_phone_e164()) ?>" class="btn btn-outline-white btn-lg">📞 Call to Order</a>
+        <?php endif; ?>
       </div>
       <div class="hero-home-proofs">
         <div class="hero-home-proof">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-          <span>Shop in US$ &amp; JMD</span>
+          <span><?= sk('Shop in US$ &amp; JMD', 'Shop in US$ &amp; JMD', 'Shop in US$ &amp; JMD') ?></span>
         </div>
         <div class="hero-home-proof">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          <span>Island-Wide Delivery &amp; Local Pickup</span>
+          <span><?= sk('Island-Wide Delivery &amp; Local Pickup', 'Island-Wide Delivery &amp; Local Pickup', 'US &amp; Jamaica Shipping') ?></span>
         </div>
         <div class="hero-home-proof">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -45,6 +56,10 @@ require_once __DIR__ . '/includes/header.php';
     </div>
   </div>
 </section>
+<style>
+.hero-weekly{display:inline-block;background:rgba(201,149,108,.95);color:#fff;padding:7px 16px;border-radius:30px;font-size:0.86rem;font-weight:600;margin:0 0 16px;box-shadow:0 6px 18px rgba(0,0,0,.2);backdrop-filter:blur(2px)}
+.hero-weekly strong{font-weight:800;letter-spacing:.02em}
+</style>
 
 <!-- ░░ COLLECTIONS ░░ -->
 <section class="section">

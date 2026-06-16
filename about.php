@@ -20,7 +20,11 @@ require_once __DIR__ . '/includes/header.php';
 
     <div class="about-story">
       <div class="about-img">
-        <img src="<?= asset_base() ?>/assets/images/aestheticjourney-cream-8293579_1920.jpg" alt="Styled home interior" loading="lazy" style="width:100%;height:100%;object-fit:cover">
+        <?php
+          $aboutImg = trim((string) get_setting('about_image', ''));
+          $aboutSrc = $aboutImg !== '' ? (preg_match('~^https?://~i', $aboutImg) ? $aboutImg : product_img($aboutImg)) : asset_base() . '/assets/images/aestheticjourney-cream-8293579_1920.jpg';
+        ?>
+        <img src="<?= h($aboutSrc) ?>" alt="<?= h(SITE_NAME) ?>" loading="lazy" style="width:100%;height:100%;object-fit:cover">
       </div>
       <div>
         <h2 style="margin-bottom:16px"><?= sk('Rooted in Falmouth, serving all of Jamaica', 'Rooted in Jamaica, beauty for everyone', 'Curated style, shipped to your door') ?></h2>
