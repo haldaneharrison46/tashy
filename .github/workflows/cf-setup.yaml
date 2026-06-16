@@ -52,6 +52,10 @@ jobs:
                 | while read -r rid; do
                     curl -s -X PATCH -H "$AUTH" -H "$CT" --data '{"proxied":true}' "$BASE/zones/$ID/dns_records/$rid" | jq -c '{name: .result.name, type: .result.type, proxied: .result.proxied}'
                   done
+              echo "-- APPLY: delete page rules (remove redirects) --"
+              curl -s -H "$AUTH" "$BASE/zones/$ID/pagerules" | jq -r '.result[]?.id' | while read -r pr; do
+                curl -s -X DELETE -H "$AUTH" "$BASE/zones/$ID/pagerules/$pr" | jq -c '{deleted: .success, id: .result.id, errors}'
+              done
               echo "-- APPLY: un-proxy mail/service CNAMEs (DNS only) --"
               curl -s -H "$AUTH" "$BASE/zones/$ID/dns_records?per_page=100" \
                 | jq -r '.result[] | select(.type=="CNAME" and .proxied==true) | .id' \
