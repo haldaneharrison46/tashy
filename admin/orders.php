@@ -49,7 +49,10 @@ if ($viewId) {
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap">
       <a href="orders.php" style="color:var(--rose-gold)">&larr; Back to Orders</a>
       <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
-        <a href="slip.php?id=<?= (int)$order['id'] ?>&type=invoice" target="_blank" class="btn btn-outline btn-sm">🧾 Invoice</a>
+        <a href="slip.php?id=<?= (int)$order['id'] ?>&type=receipt" target="_blank" class="btn btn-outline btn-sm">🧾 Receipt</a>
+        <a href="slip.php?id=<?= (int)$order['id'] ?>&type=receipt_text" target="_blank" class="btn btn-outline btn-sm">🖨 Text receipt</a>
+        <a href="slip.php?id=<?= (int)$order['id'] ?>&type=invoice" target="_blank" class="btn btn-outline btn-sm">📄 Invoice</a>
+        <a href="slip.php?id=<?= (int)$order['id'] ?>&type=label" target="_blank" class="btn btn-outline btn-sm">🏷 Label</a>
         <a href="slip.php?id=<?= (int)$order['id'] ?>&type=pick" target="_blank" class="btn btn-outline btn-sm">📋 Pick slip</a>
         <a href="slip.php?id=<?= (int)$order['id'] ?>&type=packing" target="_blank" class="btn btn-outline btn-sm">📦 Packing slip</a>
         <a href="returns.php?action=new&order_id=<?= (int)$order['id'] ?>" class="btn btn-outline btn-sm">↩️ Return</a>
