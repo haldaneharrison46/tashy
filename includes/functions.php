@@ -61,8 +61,17 @@ function brand_monogram(): string { $v = trim((string)get_setting('brand_monogra
 
 // Store kind drives the site's marketing copy. 'home' = Tashy home décor
 // (default), 'beauty' = Shanshan Beauty Supplies. sk() picks the variant.
-function store_kind(): string { return get_setting('store_kind', 'home') === 'beauty' ? 'beauty' : 'home'; }
-function sk(string $home, string $beauty): string { return store_kind() === 'beauty' ? $beauty : $home; }
+function store_kind(): string {
+    $k = get_setting('store_kind', 'home');
+    return in_array($k, ['home', 'beauty', 'luxe'], true) ? $k : 'home';
+}
+function sk(string $home, string $beauty, ?string $luxe = null): string {
+    switch (store_kind()) {
+        case 'beauty': return $beauty;
+        case 'luxe':   return $luxe ?? $home;
+        default:       return $home;
+    }
+}
 
 // Returns the brand logo as inline SVG, scaled to $width. The wordmark uses
 // currentColor so it adapts to its context (dark admin sidebar, light header);
@@ -143,13 +152,22 @@ function currency_config(): array {
         'eur' => ['symbol' => '€',   'rate' => 0.0059, 'label' => '🇪🇺 EUR'],
     ];
 }
-function current_currency(): string {
-    $c = strtolower($_COOKIE['cur'] ?? 'jmd');
+// The store's base currency = the CURRENCY constant (prices are stored in it).
+function currency_base(): string {
+    $c = defined('CURRENCY') ? strtolower(CURRENCY) : 'jmd';
     return array_key_exists($c, currency_config()) ? $c : 'jmd';
 }
+function current_currency(): string {
+    $c = strtolower($_COOKIE['cur'] ?? currency_base());
+    return array_key_exists($c, currency_config()) ? $c : currency_base();
+}
 function money(float $amount): string {
-    $cfg = currency_config()[current_currency()];
-    return $cfg['symbol'] . number_format($amount * $cfg['rate'], 2);
+    $cfg  = currency_config();
+    $base = currency_base();
+    $cur  = current_currency();
+    // Stored amounts are in the base currency; convert to the chosen display currency.
+    $factor = $cfg[$base]['rate'] > 0 ? ($cfg[$cur]['rate'] / $cfg[$base]['rate']) : 1.0;
+    return $cfg[$cur]['symbol'] . number_format($amount * $factor, 2);
 }
 
 // ── Product reviews ───────────────────────────────────────────
@@ -383,6 +401,17 @@ function jamaica_parishes(): array {
     return ['Kingston','St. Andrew','St. Thomas','Portland','St. Mary','St. Ann',
             'Trelawny','St. James','Hanover','Westmoreland','St. Elizabeth',
             'Manchester','Clarendon','St. Catherine'];
+}
+
+// US states (for stores that ship to the United States)
+function us_states(): array {
+    return ['Alabama','Alaska','Arizona','Arkansas','California','Colorado','Connecticut','Delaware',
+            'District of Columbia','Florida','Georgia','Hawaii','Idaho','Illinois','Indiana','Iowa',
+            'Kansas','Kentucky','Louisiana','Maine','Maryland','Massachusetts','Michigan','Minnesota',
+            'Mississippi','Missouri','Montana','Nebraska','Nevada','New Hampshire','New Jersey','New Mexico',
+            'New York','North Carolina','North Dakota','Ohio','Oklahoma','Oregon','Pennsylvania','Rhode Island',
+            'South Carolina','South Dakota','Tennessee','Texas','Utah','Vermont','Virginia','Washington',
+            'West Virginia','Wisconsin','Wyoming'];
 }
 
 // ── Image path helper ─────────────────────────────────────────

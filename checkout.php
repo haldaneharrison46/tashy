@@ -136,7 +136,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="form-group">
               <label class="form-label">Country *</label>
               <select name="country" id="ckCountry" class="form-control" required>
-                <?php $selCountry = $_POST['country'] ?? 'Jamaica'; foreach ($countries as $cn): ?>
+                <?php $selCountry = $_POST['country'] ?? (strtolower(CURRENCY) === 'usd' ? 'United States' : 'Jamaica'); foreach ($countries as $cn): ?>
                 <option value="<?= h($cn) ?>" <?= ($selCountry === $cn) ? 'selected' : '' ?>><?= h($cn) ?></option>
                 <?php endforeach; ?>
               </select>
@@ -145,14 +145,21 @@ require_once __DIR__ . '/includes/header.php';
               <label class="form-label">City / Community *</label>
               <input type="text" name="city" class="form-control" required value="<?= h($_POST['city'] ?? '') ?>">
             </div>
-            <div class="form-group" id="ckParishGroup">
-              <label class="form-label">Parish <span id="ckParishStar">*</span></label>
-              <select name="parish" id="ckParish" class="form-control" required>
+            <div class="form-group" id="ckRegionGroup">
+              <label class="form-label">Parish / State <span id="ckRegionStar">*</span></label>
+              <select name="parish" id="ckParishJM" class="form-control" required>
                 <option value="">Select Parish</option>
                 <?php foreach ($parishes as $p): ?>
                 <option value="<?= h($p) ?>" <?= (($_POST['parish'] ?? '') === $p) ? 'selected' : '' ?>><?= h($p) ?></option>
                 <?php endforeach; ?>
               </select>
+              <select name="parish" id="ckStateUS" class="form-control" disabled style="display:none">
+                <option value="">Select State</option>
+                <?php foreach (us_states() as $s): ?>
+                <option value="<?= h($s) ?>" <?= (($_POST['parish'] ?? '') === $s) ? 'selected' : '' ?>><?= h($s) ?></option>
+                <?php endforeach; ?>
+              </select>
+              <input type="text" name="parish" id="ckRegionOther" class="form-control" disabled style="display:none" placeholder="State / Region" value="<?= h($_POST['parish'] ?? '') ?>">
             </div>
             <div class="form-group" style="grid-column:1/-1">
               <label class="form-label">Order Notes (optional)</label>
@@ -210,26 +217,39 @@ require_once __DIR__ . '/includes/header.php';
 </div>
 
 <?php
-  $_cur = currency_config()[current_currency()];
+  $_cfg      = currency_config();
+  $_curCfg   = $_cfg[current_currency()];
+  $_baseRate = $_cfg[currency_base()]['rate'];
 ?>
 <script>
 (function(){
   var TAX_COUNTRY = <?= json_encode(tax_country()) ?>;
-  var RATE        = <?= json_encode((float)$_cur['rate']) ?>;
-  var SYM         = <?= json_encode($_cur['symbol']) ?>;
-  var SUBTOTAL    = <?= json_encode((float)$totals['subtotal']) ?>;       // JMD
-  var SHIPPING    = <?= json_encode((float)$totals['shipping']) ?>;       // JMD (estimate)
-  var TAX_JMD     = <?= json_encode((float)$totals['tax']) ?>;           // JMD when taxed
-  function fmt(jmd){ return SYM + (jmd * RATE).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  var DRATE = <?= json_encode((float)$_curCfg['rate']) ?>;   // display currency rate
+  var BRATE = <?= json_encode((float)$_baseRate) ?>;          // base currency rate
+  var SYM   = <?= json_encode($_curCfg['symbol']) ?>;
+  var SUBTOTAL = <?= json_encode((float)$totals['subtotal']) ?>;   // base currency
+  var SHIPPING = <?= json_encode((float)$totals['shipping']) ?>;   // base currency (estimate)
+  var TAX_BASE = <?= json_encode((float)$totals['tax']) ?>;        // base currency when taxed
+  function fmt(a){ var f = BRATE > 0 ? (DRATE / BRATE) : 1; return SYM + (a * f).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
   var country = document.getElementById('ckCountry');
-  var parish  = document.getElementById('ckParish');
-  var star    = document.getElementById('ckParishStar');
+  var jm = document.getElementById('ckParishJM'), us = document.getElementById('ckStateUS'), other = document.getElementById('ckRegionOther');
+  var star = document.getElementById('ckRegionStar');
+  function showRegion(active, req){
+    [jm, us, other].forEach(function (el) {
+      if (!el) return;
+      var on = (el === active);
+      el.style.display = on ? '' : 'none';
+      el.disabled = !on;
+      el.required = on && req;
+    });
+    if (star) star.style.display = req ? '' : 'none';
+  }
   function sync(){
-    var isTax = country.value.trim().toLowerCase() === TAX_COUNTRY.toLowerCase();
-    // Parish only required for the tax country (Jamaica).
-    if (parish){ parish.required = isTax; }
-    if (star){ star.style.display = isTax ? '' : 'none'; }
-    var tax = isTax ? TAX_JMD : 0;
+    var c = country.value.trim();
+    if (c === 'Jamaica') showRegion(jm, true);
+    else if (c === 'United States') showRegion(us, true);
+    else showRegion(other, false);
+    var tax = (c.toLowerCase() === TAX_COUNTRY.toLowerCase()) ? TAX_BASE : 0;
     document.getElementById('ckTaxVal').textContent = fmt(tax);
     var total = SUBTOTAL + SHIPPING + tax;
     document.getElementById('ckTotalVal').textContent = fmt(total);
