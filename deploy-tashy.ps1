@@ -1,16 +1,25 @@
 param(
     [string]$KeyPath,                       # OpenSSH private key for key auth
     [string]$Password,                      # SFTP password (or set $env:TASHY_SFTP_PASS)
-    [string]$User      = "a1645260",
+    [string]$User      = "a1229881",        # root chroot (/) user — can reach /shan
     [string]$Server    = "access-5020587559.webspace-host.com",
     [int]   $Port      = 22,
-    [string]$RemoteDir = "/var/www/vhosts/tashykollections.com/httpdocs/tashy"
+    [string]$RemoteDir = "/shan",           # tashykollections.online lives here
+    [switch]$Mirror                          # add -Mirror to also DELETE remote files missing locally
 )
 # ============================================================
-#  Tashy Kollections - Deploy to  tashykollections.online/tashy
-#  Uploads the site into the  httpdocs/tashy  sub-folder of the SAME
-#  IONOS webspace that serves tashykollections.com, reachable at:
-#       https://tashykollections.online/tashy
+#  Tashy Kollections - Deploy to  tashykollections.online
+#  .online is served from the  /shan  folder of the SAME IONOS webspace
+#  that serves tashykollections.com (root /). Verified 2026-06-16 map:
+#       /       -> tashykollections.com     (DB dbs15760212)
+#       /shan   -> tashykollections.online  (DB dbs15760212, shared)
+#       /tashy  -> tashykollections.org      (DB dbs15785127) -- do NOT deploy here
+#  Reach /shan with the ROOT chroot user (a1229881). The a1645260 user is
+#  chrooted to /tashy (=.org) and CANNOT update .online.
+#
+#  SAFETY: config/db.php is excluded (each folder has its own correct
+#  SITE_URL/DB) and remote files are NOT deleted unless you pass -Mirror
+#  (so admin-uploaded product images in assets/images are preserved).
 #
 #  AUTH - two supported methods (key is what .com's GitHub deploy uses):
 #    1) SSH KEY (recommended):
@@ -92,15 +101,18 @@ if ($authMode -eq "key") {
 
 Write-Host "Uploading via WinSCP (SFTP)..." -ForegroundColor Cyan
 
-# Exclude dev tooling and VCS from the web-served folder.
-# (config/ is intentionally NOT excluded - the site needs config/db.php.)
-$mask = "| .git/; .github/; .deploy-now/; _localdev/; .claude/; *.ps1; *.ppk; deploy.log; .gitignore"
+# Exclude dev tooling, VCS, AND config/ (each folder keeps its own db.php).
+$mask = "| config/; .git/; .github/; .deploy-now/; _localdev/; .claude/; *.ps1; *.ppk; deploy.log; .gitignore"
+
+# Upload-only by default; -Mirror enables -delete (removes remote files
+# missing locally — caution: also deletes admin-uploaded images).
+$deleteFlag = if ($Mirror) { "-delete " } else { "" }
 
 $winscpScript = @"
 $openLine
 option batch abort
 option confirm off
-synchronize remote -delete -criteria=size -filemask="$mask" "." "$RemoteDir"
+synchronize remote $deleteFlag-criteria=size -filemask="$mask" "." "$RemoteDir"
 close
 exit
 "@
