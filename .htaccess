@@ -24,8 +24,11 @@ DirectoryIndex index.php
   # context, so they work whether this .htaccess sits at the web root
   # (tashykollections.com) or in a sub-folder (…/tashy on the .online domain).
 
-  # XML sitemap & robots served by PHP (base-path aware)
+  # XML sitemap & robots: serve a real static file when present (some shared
+  # hosts 404 the rewrite-to-PHP), otherwise fall back to the PHP generator.
+  RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
+  RewriteCond %{REQUEST_FILENAME} !-f
   RewriteRule ^robots\.txt$ robots.php [L]
 
   # Block direct PHP includes access
