@@ -83,6 +83,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_marketing'])) {
     redirect(asset_base() . '/admin/settings.php#marketing');
 }
 
+/* ── Homepage / hero ── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_homepage'])) {
+    csrf_check();
+    set_setting('hero_image',      trim($_POST['hero_image'] ?? ''));
+    set_setting('about_image',     trim($_POST['about_image'] ?? ''));
+    set_setting('weekly_special',  trim($_POST['weekly_special'] ?? ''));
+    set_setting('welcome_message', trim($_POST['welcome_message'] ?? ''));
+    set_setting('exit_message',    trim($_POST['exit_message'] ?? ''));
+    set_setting('call_to_order',   isset($_POST['call_to_order']) ? '1' : '0');
+    flash('success', 'Homepage settings saved.');
+    redirect(asset_base() . '/admin/settings.php#homepage');
+}
+
 /* ── Preset messages add/delete ── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['preset_add'])) {
     csrf_check();
@@ -137,6 +150,7 @@ $scopeLabels = ['pos' => 'POS receipt share', 'order' => 'Order status update', 
   <a href="#email">Email</a>
   <a href="#tax">Tax</a>
   <a href="#marketing">Announcement</a>
+  <a href="#homepage">Homepage</a>
   <a href="#presets">Preset Messages</a>
   <a href="#data">Database</a>
 </div>
@@ -305,6 +319,28 @@ $scopeLabels = ['pos' => 'POS receipt share', 'order' => 'Order status update', 
         <input type="number" name="announcement_speed" min="5" max="60" class="form-control" value="<?= h(get_setting('announcement_speed','18')) ?>"></div>
     </div>
     <button type="submit" class="btn btn-primary" style="margin-top:8px">Save Announcement</button>
+  </form>
+</div>
+
+<!-- ═══ HOMEPAGE / HERO ═══ -->
+<div class="admin-card" id="homepage" style="max-width:680px">
+  <h2>Homepage &amp; Hero</h2>
+  <p style="color:#888;font-size:0.84rem;margin-bottom:14px">Images accept a filename in assets/images or a full image URL. Leave a field blank to use the default.</p>
+  <form method="post">
+    <?= csrf_field() ?><input type="hidden" name="save_homepage" value="1">
+    <div class="form-group full"><label class="form-label">Hero background image</label>
+      <input type="text" name="hero_image" class="form-control" value="<?= h(get_setting('hero_image','')) ?>" placeholder="hero-home.jpg or https://…"></div>
+    <div class="form-group full"><label class="form-label">About-page image</label>
+      <input type="text" name="about_image" class="form-control" value="<?= h(get_setting('about_image','')) ?>" placeholder="filename or https://…"></div>
+    <div class="form-group full"><label class="form-label">Weekly special <span style="color:#888;font-weight:400">(badge on the hero — blank to hide)</span></label>
+      <input type="text" name="weekly_special" class="form-control" value="<?= h(get_setting('weekly_special','')) ?>" placeholder="20% off Hand Bags this week"></div>
+    <div class="form-group full"><label class="form-label">Welcome message <span style="color:#888;font-weight:400">(small toast on first visit — blank to disable)</span></label>
+      <input type="text" name="welcome_message" class="form-control" value="<?= h(get_setting('welcome_message','')) ?>" placeholder="Welcome! Free shipping over $75"></div>
+    <div class="form-group full"><label class="form-label">Exit thank-you <span style="color:#888;font-weight:400">(shown when a visitor leaves — blank to disable)</span></label>
+      <input type="text" name="exit_message" class="form-control" value="<?= h(get_setting('exit_message','')) ?>" placeholder="Thanks for visiting! Come back soon"></div>
+    <div class="form-group full" style="margin-top:6px"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+      <input type="checkbox" name="call_to_order" value="1" <?= setting_bool('call_to_order') ? 'checked' : '' ?>> Show a "Call to Order" button on the hero (uses the store phone)</label></div>
+    <button type="submit" class="btn btn-primary" style="margin-top:8px">Save Homepage</button>
   </form>
 </div>
 
