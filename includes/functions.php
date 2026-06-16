@@ -94,8 +94,8 @@ function tk_logo(int $width = 250, string $class = 'logo-svg'): string {
 }
 
 // ── Output escaping ───────────────────────────────────────────
-function h(string $s): string {
-    return htmlspecialchars($s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+function h(?string $s): string {
+    return htmlspecialchars((string)$s, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
 // ── Redirect ──────────────────────────────────────────────────
