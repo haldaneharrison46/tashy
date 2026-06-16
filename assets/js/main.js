@@ -487,3 +487,33 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.addEventListener('click', function () { setCurrency(btn.getAttribute('data-pref-cur')); });
   });
 });
+
+/* ── Language switcher (Google Translate) ───────────────────── */
+function tkCurrentLang() {
+  var m = document.cookie.match(/(?:^|;\s*)googtrans=\/[^/]*\/([^;]+)/);
+  var g = m ? decodeURIComponent(m[1]).toLowerCase() : 'en';
+  return g.indexOf('zh') === 0 ? 'zh' : g;   // zh-CN → zh
+}
+function setLang(lang) {
+  var host = location.hostname;
+  ['', ';domain=' + host, ';domain=.' + host].forEach(function (d) {
+    document.cookie = 'googtrans=;path=/;max-age=0' + d;
+  });
+  if (lang && lang !== 'en') {
+    var g = lang === 'zh' ? 'zh-CN' : lang;
+    ['', ';domain=' + host, ';domain=.' + host].forEach(function (d) {
+      document.cookie = 'googtrans=/en/' + g + ';path=/' + d;
+    });
+  }
+  location.reload();
+}
+document.addEventListener('DOMContentLoaded', function () {
+  var cur = tkCurrentLang();
+  var names = { en: 'EN', es: 'ES', fr: 'FR', zh: '中' };
+  var lbl = document.getElementById('hdrLangLbl');
+  if (lbl) lbl.textContent = names[cur] || 'EN';
+  document.querySelectorAll('[data-pref-lang]').forEach(function (btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-pref-lang') === cur);
+    btn.addEventListener('click', function () { setLang(btn.getAttribute('data-pref-lang')); });
+  });
+});

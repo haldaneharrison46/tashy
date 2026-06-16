@@ -46,7 +46,7 @@ require_once __DIR__ . '/includes/header.php';
 <section class="section">
   <div class="container">
     <div class="text-center" style="margin-bottom:2.5rem">
-      <h2 class="section-title">Shop by Collection</h2>
+      <h2 class="section-title"><?= sk('Shop by Collection', 'Category Filter') ?></h2>
       <p class="section-sub"><?= sk('Everything you need to style every corner of your home.', 'Everything you need to look and feel your best.') ?></p>
     </div>
     <div class="collection-grid">

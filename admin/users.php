@@ -30,22 +30,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_user'])) {
         $err = 'You cannot change your own role or active status here.';
     }
 
-    if ($err) { flash('error', $err); }
-    elseif ($id) {
+    if ($err) {
+        flash('error', $err);
+        redirect(asset_base() . '/admin/users.php' . ($id ? '?action=edit&id=' . $id : '?action=add'));
+    }
+
+    if ($id) {
         $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, role=?, active=? WHERE id=?')
             ->execute([$name, $email, $phone ?: null, $role, $active, $id]);
         if ($pass !== '') $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')
             ->execute([password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]), $id]);
-        flash('success', 'User updated.');
-        redirect(asset_base() . '/admin/users.php');
     } else {
         $hash = password_hash($pass !== '' ? $pass : bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
         $pdo->prepare('INSERT INTO users (name, email, phone, role, active, password_hash) VALUES (?,?,?,?,?,?)')
             ->execute([$name, $email, $phone ?: null, $role, $active, $hash]);
-        flash('success', 'User added.');
-        redirect(asset_base() . '/admin/users.php');
+        $id = (int)$pdo->lastInsertId();
     }
-    redirect(asset_base() . '/admin/users.php' . ($id ? '?action=edit&id=' . $id : '?action=add'));
+
+    // Quick-login PIN (admin/staff). Stored hashed in admin_pin_hash.
+    $pinRaw = preg_replace('/\D/', '', (string)($_POST['admin_pin'] ?? ''));
+    if (isset($_POST['clear_pin'])) {
+        $pdo->prepare('UPDATE users SET admin_pin_hash=NULL WHERE id=?')->execute([$id]);
+    } elseif ($pinRaw !== '') {
+        if (strlen($pinRaw) >= 4 && strlen($pinRaw) <= 8) {
+            $pdo->prepare('UPDATE users SET admin_pin_hash=? WHERE id=?')
+                ->execute([password_hash($pinRaw, PASSWORD_BCRYPT, ['cost' => 12]), $id]);
+        } else {
+            flash('error', 'PIN must be 4–8 digits (other changes saved).');
+        }
+    }
+    flash('success', 'User saved.');
+    redirect(asset_base() . '/admin/users.php');
 }
 
 /* ── Add / edit form ───────────────────────── */
@@ -79,9 +94,16 @@ if ($action === 'add' || $editU) {
             </select></div>
           <div class="form-group"><label class="form-label"><?= $editU ? 'Reset password (optional)' : 'Password (optional — random if blank)' ?></label>
             <input type="text" name="password" class="form-control" placeholder="<?= $editU ? 'Leave blank to keep current' : 'Auto-generated if blank' ?>"></div>
+          <div class="form-group"><label class="form-label">Quick-login PIN <span style="color:#888;font-weight:400">(4–8 digits)</span> <?= !empty($uu['admin_pin_hash']) ? '<span class="badge badge-success">set</span>' : '' ?></label>
+            <input type="text" name="admin_pin" class="form-control" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" placeholder="<?= !empty($uu['admin_pin_hash']) ? 'Leave blank to keep' : 'e.g. 4821' ?>"></div>
           <div class="form-group full"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" name="active" value="1" <?= $uu['active'] ? 'checked' : '' ?>> Active (can sign in)</label></div>
+          <?php if (!empty($uu['admin_pin_hash'])): ?>
+          <div class="form-group full"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" name="clear_pin" value="1"> Remove quick-login PIN</label></div>
+          <?php endif; ?>
         </div>
+        <p style="font-size:0.78rem;color:#888;margin-top:-6px">The PIN enables fast staff sign-in at the admin login (works for Admin / Staff accounts).</p>
         <div style="display:flex;gap:10px;margin-top:18px">
           <button type="submit" class="btn btn-primary"><?= $editU ? 'Save Changes' : 'Add User' ?></button>
           <a href="users.php" class="btn btn-outline">Cancel</a>

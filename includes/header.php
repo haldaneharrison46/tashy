@@ -116,7 +116,7 @@ $_bodyClass = $bodyClass ?? '';
 
         <!-- Lang / Currency (desktop) — JS-injected on static, here simplified -->
         <div class="hdr-icon-pair" id="hdrIconPair">
-          <div class="hdr-icon-wrap" id="hdrLangWrap" style="display:none"><!-- language switcher hidden until translations exist -->
+          <div class="hdr-icon-wrap" id="hdrLangWrap"><!-- language switcher (Google Translate) -->
             <button class="hdr-icon-btn" id="hdrLangBtn" aria-label="Language">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
               <span id="hdrLangLbl">EN</span>
@@ -328,5 +328,20 @@ $_bodyClass = $bodyClass ?? '';
 <?php $flash = flash('error'); if ($flash): ?>
 <div class="site-flash error"><?= h($flash) ?></div>
 <?php endif; ?>
+
+<!-- ░░ Google Translate (powers the language switcher in the header) ░░ -->
+<div id="google_translate_element" style="display:none"></div>
+<style>
+  .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame { display:none !important; }
+  .goog-tooltip, #goog-gt-tt, .goog-te-balloon-frame { display:none !important; }
+  .goog-text-highlight { background:none !important; box-shadow:none !important; }
+  body { top:0 !important; position:static !important; }
+</style>
+<script>
+function googleTranslateElementInit(){
+  new google.translate.TranslateElement({ pageLanguage:'en', includedLanguages:'es,fr,zh-CN', autoDisplay:false }, 'google_translate_element');
+}
+</script>
+<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 <main>
