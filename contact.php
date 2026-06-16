@@ -100,7 +100,7 @@ require_once __DIR__ . '/includes/header.php';
         <h3 style="margin-bottom:24px">Send a Message</h3>
         <form method="post" action="">
           <?= csrf_field() ?>
-          <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="form-grid" style="gap:16px">
             <div class="form-group">
               <label class="form-label">Your Name *</label>
               <input type="text" name="name" class="form-control" required value="<?= h($_POST['name'] ?? '') ?>">

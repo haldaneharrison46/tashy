@@ -2465,3 +2465,9 @@ select.form-control { cursor: pointer; }
 @media (max-width: 420px) {
   .logo-svg { width: 150px !important; }
 }
+
+/* Contact page — mobile centering polish */
+@media (max-width: 640px) {
+  .contact-form-card, .contact-info-card { padding: 24px; }
+  .contact-form-card .btn { width: 100%; justify-content: center; }
+}
