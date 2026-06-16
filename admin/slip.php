@@ -74,8 +74,8 @@ $isLabel = ($type === 'label');
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?= $titles[$type] ?> · <?= h($o['order_number']) ?></title>
-<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+<script src="../assets/vendor/jsbarcode.min.js"></script>
+<script src="../assets/vendor/qrcode.min.js"></script>
 <style>
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #222; margin: 0; background: #f0f0f0; }
