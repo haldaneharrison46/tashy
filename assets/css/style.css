@@ -2420,3 +2420,48 @@ select.form-control { cursor: pointer; }
   /* Shop by Collection — center the tiles as a single column on phones */
   .collection-grid { grid-template-columns: 1fr; max-width: 420px; margin-left: auto; margin-right: auto; }
 }
+/* ============================================================
+   MOBILE POLISH + PRODUCT SHARE  (responsive fixes)
+   ============================================================ */
+/* Product page share / copy-link buttons */
+.pdp-share { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 18px 0 4px; }
+.pdp-share .share-label { font-size: 0.8rem; font-weight: 600; color: var(--grey-mid); margin-right: 4px; }
+.pdp-share a, .pdp-share button {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 0.8rem; font-weight: 600; cursor: pointer;
+  padding: 8px 12px; border-radius: 999px;
+  border: 1px solid var(--grey-light); background: var(--white); color: var(--black);
+  text-decoration: none; transition: all var(--transition);
+}
+.pdp-share a:hover, .pdp-share button:hover { border-color: var(--rose-gold); color: var(--rose-gold); }
+
+@media (max-width: 900px) {
+  /* Bigger logo on mobile */
+  .logo-svg { width: 200px !important; }
+  /* Center the About story */
+  .about-story { text-align: center; }
+  .about-story .about-img { max-width: 460px; margin-left: auto; margin-right: auto; }
+  /* Center the Contact page cards */
+  .contact-grid { text-align: center; }
+  .contact-info-card, .contact-form-card { margin-left: auto; margin-right: auto; width: 100%; max-width: 560px; }
+  .contact-form-card form, .contact-form-card .form-grid { text-align: left; }
+  .contact-info-card .contact-item { justify-content: center; }
+  /* Center the Shop header + product area */
+  .shop-page-header .container { text-align: center; }
+  .shop-main { width: 100%; }
+  .pdp-share { justify-content: center; }
+}
+
+@media (max-width: 640px) {
+  .logo-svg { width: 175px !important; }
+  /* Smaller price + centered, stacked add-to-cart on product cards */
+  .product-price, .price-current { font-size: 0.92rem; }
+  .price-compare { font-size: 0.78rem; }
+  .product-footer { flex-direction: column; align-items: stretch; gap: 8px; padding-top: 10px; }
+  .product-footer .product-price { text-align: center; }
+  .quick-add-btn { width: 100%; text-align: center; justify-content: center; padding: 10px 12px; }
+}
+
+@media (max-width: 420px) {
+  .logo-svg { width: 150px !important; }
+}

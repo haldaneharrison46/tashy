@@ -122,6 +122,31 @@ require_once __DIR__ . '/includes/header.php';
       <p style="color:#c0392b;margin-bottom:20px">⚠ Currently out of stock.</p>
       <?php endif; ?>
 
+      <?php
+        $shareUrl  = SITE_URL . '/product.php?slug=' . urlencode($product['slug']);
+        $shareText = $product['name'] . ' — ' . SITE_NAME;
+        $u = rawurlencode($shareUrl); $t = rawurlencode($shareText);
+        $shareImg = rawurlencode($ogImage);
+      ?>
+      <div class="pdp-share">
+        <span class="share-label">Share:</span>
+        <a href="https://wa.me/?text=<?= $t ?>%20<?= $u ?>" target="_blank" rel="noopener" aria-label="Share on WhatsApp">WhatsApp</a>
+        <a href="https://www.facebook.com/sharer/sharer.php?u=<?= $u ?>" target="_blank" rel="noopener" aria-label="Share on Facebook">Facebook</a>
+        <a href="https://twitter.com/intent/tweet?text=<?= $t ?>&url=<?= $u ?>" target="_blank" rel="noopener" aria-label="Share on X">X</a>
+        <a href="https://pinterest.com/pin/create/button/?url=<?= $u ?>&media=<?= $shareImg ?>&description=<?= $t ?>" target="_blank" rel="noopener" aria-label="Share on Pinterest">Pinterest</a>
+        <button type="button" id="copyLinkBtn" data-url="<?= h($shareUrl) ?>">🔗 Copy link</button>
+      </div>
+      <script>
+      (function(){
+        var b = document.getElementById('copyLinkBtn'); if (!b) return;
+        b.addEventListener('click', function(){
+          var url = b.getAttribute('data-url'), done = function(){ var o=b.textContent; b.textContent='✓ Copied!'; setTimeout(function(){ b.textContent=o; }, 1800); };
+          if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(done, function(){ window.prompt('Copy this link:', url); }); }
+          else { window.prompt('Copy this link:', url); }
+        });
+      })();
+      </script>
+
       <?php if ($product['tags']): ?>
       <div class="pdp-tags" style="margin-top:20px">
         <?php foreach (explode(',', $product['tags']) as $tag): ?>
