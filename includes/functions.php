@@ -51,21 +51,41 @@ function asset_base(): string {
     return $base = base_path();
 }
 
-// ── Brand logo (reusable SVG) ─────────────────────────────────
-// Returns the Tashy Kollections logo as inline SVG, scaled to $width.
-// The wordmark "Tashy" uses currentColor so it adapts to its context (dark
-// admin sidebar, light header, etc.); the emblem + "KOLLECTIONS" stay rose-gold.
+// ── Brand (config-driven, per-site) ───────────────────────────
+// Each site brands itself from its own settings, so .com/.online show the
+// default "Tashy Kollections" wordmark while Shanshan Beauty (its own DB)
+// shows its own. Defaults reproduce the original Tashy logo exactly.
+function brand_wordmark(): string { $v = trim((string)get_setting('brand_name', 'Tashy')); return $v !== '' ? $v : 'Tashy'; }
+function brand_subtitle(): string { $v = get_setting('brand_subtitle', 'KOLLECTIONS'); return $v === null ? 'KOLLECTIONS' : $v; }
+function brand_monogram(): string { $v = trim((string)get_setting('brand_monogram', 'T')); return $v !== '' ? mb_substr($v, 0, 1) : 'T'; }
+
+// Returns the brand logo as inline SVG, scaled to $width. The wordmark uses
+// currentColor so it adapts to its context (dark admin sidebar, light header);
+// the emblem + subtitle stay rose-gold. Font sizes auto-fit longer names.
 function tk_logo(int $width = 250, string $class = 'logo-svg'): string {
-    $h = (int) round($width * 44 / 250);
-    return '<svg class="' . h($class) . '" width="' . $width . '" height="' . $h . '" viewBox="0 0 250 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Tashy Kollections">'
+    $h     = (int) round($width * 44 / 250);
+    $word  = brand_wordmark();
+    $sub   = brand_subtitle();
+    $mono  = brand_monogram();
+    $label = defined('SITE_NAME') ? SITE_NAME : trim($word . ' ' . $sub);
+    $wl    = mb_strlen($word);
+    $wfs   = $wl <= 5 ? 25 : ($wl <= 7 ? 22 : ($wl <= 9 ? 19 : ($wl <= 11 ? 16 : 14)));
+    $sl    = mb_strlen($sub);
+    $sfs   = $sl <= 11 ? 9 : ($sl <= 16 ? 8 : 7);
+    $sls   = $sl <= 11 ? '0.24em' : ($sl <= 16 ? '0.12em' : '0.06em');
+    $pf    = '\'Playfair Display\', Georgia, serif';
+    $inter = '\'Inter\', Arial, sans-serif';
+    $out = '<svg class="' . h($class) . '" width="' . $width . '" height="' . $h . '" viewBox="0 0 250 44" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="' . h($label) . '">'
         . '<circle cx="22" cy="22" r="20" fill="none" stroke="#c9956c" stroke-width="1.4"/>'
         . '<circle cx="22" cy="22" r="16.4" fill="none" stroke="#c9956c" stroke-width="0.7" opacity="0.55"/>'
-        . '<text x="22" y="30" text-anchor="middle" font-family="\'Playfair Display\', Georgia, serif" font-size="22" font-weight="700" fill="currentColor">T</text>'
+        . '<text x="22" y="30" text-anchor="middle" font-family="' . $pf . '" font-size="22" font-weight="700" fill="currentColor">' . h($mono) . '</text>'
         . '<path d="M13 34 q9 3.6 18 0" fill="none" stroke="#c9956c" stroke-width="1" stroke-linecap="round"/>'
         . '<circle cx="22" cy="4.6" r="1.1" fill="#c9956c"/>'
-        . '<text x="52" y="28" font-family="\'Playfair Display\', Georgia, serif" font-size="25" font-weight="700" fill="currentColor">Tashy</text>'
-        . '<text x="53" y="40" font-family="\'Inter\', Arial, sans-serif" font-size="9" font-weight="600" fill="#c9956c" letter-spacing="0.24em">KOLLECTIONS</text>'
-        . '</svg>';
+        . '<text x="52" y="28" font-family="' . $pf . '" font-size="' . $wfs . '" font-weight="700" fill="currentColor">' . h($word) . '</text>';
+    if ($sub !== '') {
+        $out .= '<text x="53" y="40" font-family="' . $inter . '" font-size="' . $sfs . '" font-weight="600" fill="#c9956c" letter-spacing="' . $sls . '">' . h($sub) . '</text>';
+    }
+    return $out . '</svg>';
 }
 
 // ── Output escaping ───────────────────────────────────────────

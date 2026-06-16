@@ -105,7 +105,7 @@ function tk_order_summary(array $o, array $items): string {
     $sym = '#c9956c';
     return '
     <div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#222">
-      <h2 style="color:' . $sym . '">Tashy Kollections</h2>
+      <h2 style="color:' . $sym . '">' . htmlspecialchars(defined('SITE_NAME') ? SITE_NAME : 'Tashy Kollections') . '</h2>
       <p>Order <strong>' . htmlspecialchars($o['order_number']) . '</strong></p>
       <table style="width:100%;border-collapse:collapse;margin:12px 0">' . tk_order_rows($items) . '
         <tr><td style="padding:8px 12px;text-align:right">Subtotal</td><td style="padding:8px 12px;text-align:right">' . tk_jmd($o['subtotal']) . '</td></tr>
@@ -134,7 +134,7 @@ function send_order_emails(array $o, array $items): void {
     if (!empty($o['ship_email']) && filter_var($o['ship_email'], FILTER_VALIDATE_EMAIL)) {
         tk_mail(
             $o['ship_email'],
-            'Your Tashy Kollections order ' . $o['order_number'],
+            'Your ' . (defined('SITE_NAME') ? SITE_NAME : 'Tashy Kollections') . ' order ' . $o['order_number'],
             '<p>Hi ' . htmlspecialchars($o['ship_name']) . ', thanks for your order! We\'ll be in touch to arrange delivery.</p>' . $body
         );
     }

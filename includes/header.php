@@ -79,17 +79,7 @@ $_bodyClass = $bodyClass ?? '';
 
       <!-- Logo -->
       <a href="<?= asset_base() ?>/index.php" class="header-logo">
-        <svg class="logo-svg" width="250" height="44" viewBox="0 0 250 44" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Tashy Kollections">
-          <!-- Emblem: roundel monogram -->
-          <circle cx="22" cy="22" r="20" fill="none" stroke="#c9956c" stroke-width="1.4"/>
-          <circle cx="22" cy="22" r="16.4" fill="none" stroke="#c9956c" stroke-width="0.7" opacity="0.55"/>
-          <text x="22" y="30" text-anchor="middle" font-family="'Playfair Display', Georgia, serif" font-size="22" font-weight="700" fill="currentColor">T</text>
-          <path d="M13 34 q9 3.6 18 0" fill="none" stroke="#c9956c" stroke-width="1" stroke-linecap="round"/>
-          <circle cx="22" cy="4.6" r="1.1" fill="#c9956c"/>
-          <!-- Wordmark -->
-          <text x="52" y="28" font-family="'Playfair Display', Georgia, serif" font-size="25" font-weight="700" fill="currentColor">Tashy</text>
-          <text x="53" y="40" font-family="'Inter', Arial, sans-serif" font-size="9" font-weight="600" fill="#c9956c" letter-spacing="0.24em">KOLLECTIONS</text>
-        </svg>
+        <?= tk_logo(250) ?>
       </a>
 
       <!-- Desktop Nav -->
@@ -221,7 +211,7 @@ $_bodyClass = $bodyClass ?? '';
 <!-- ░░ MOBILE DRAWER ░░ -->
 <nav class="mobile-drawer" id="mobileDrawer" aria-label="Mobile navigation">
   <div class="mobile-drawer-header">
-    <span style="font-weight:700;font-size:0.9rem;color:#c9956c;">TASHY KOLLECTIONS</span>
+    <span style="font-weight:700;font-size:0.9rem;color:#c9956c;"><?= h(mb_strtoupper(SITE_NAME)) ?></span>
     <button class="header-action-btn" id="closeMenu">
       <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
