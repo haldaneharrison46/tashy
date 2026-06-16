@@ -2471,3 +2471,26 @@ select.form-control { cursor: pointer; }
   .contact-form-card, .contact-info-card { padding: 24px; }
   .contact-form-card .btn { width: 100%; justify-content: center; }
 }
+
+/* ============================================================
+   SHOP PAGE — MOBILE (centered filters, no right-overflow)
+   ============================================================ */
+@media (max-width: 900px) {
+  .shop-layout { grid-template-columns: 1fr !important; gap: 20px; }
+  .shop-layout, .shop-main, .filter-sidebar { min-width: 0; }
+  .filter-sidebar { position: static; }
+  .filter-card { padding: 18px 16px; }
+  .filter-panel-title { text-align: center; font-size: 1.2rem; padding-bottom: 12px; }
+  /* Category / Sort links become a centered, wrapping chip cloud */
+  .filter-sidebar .filter-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 18px; }
+  .filter-sidebar .filter-title { flex: 0 0 100%; text-align: center; margin-bottom: 4px; }
+  .filter-sidebar .filter-tag {
+    display: inline-flex; width: auto; margin: 0; justify-content: center;
+    font-size: 0.85rem; padding: 7px 14px; border-radius: 999px;
+  }
+  /* Search bar full width */
+  .shop-search-bar { width: 100%; }
+  /* Product grid: equal 2-up that fills/centres, cards can shrink */
+  .product-grid { grid-template-columns: 1fr 1fr; }
+  .product-grid > .product-card { min-width: 0; }
+}
