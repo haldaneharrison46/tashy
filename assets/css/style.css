@@ -2494,3 +2494,10 @@ select.form-control { cursor: pointer; }
   .product-grid { grid-template-columns: 1fr 1fr; }
   .product-grid > .product-card { min-width: 0; }
 }
+
+/* Shop search bar — keep the button on-screen on mobile */
+@media (max-width: 900px) {
+  .shop-search-bar { width: 100%; flex-wrap: nowrap; }
+  .shop-search-bar input, .shop-search-bar .form-control { min-width: 0; flex: 1 1 auto; }
+  .shop-search-bar .btn { flex: 0 0 auto; white-space: nowrap; }
+}
