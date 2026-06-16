@@ -1,0 +1,50 @@
+name: "Maintenance: Cloudflare setup (.com / .org)"
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "Apply SSL settings + proxy web records (else discover only)"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  cf:
+    runs-on: ubuntu-latest
+    env:
+      CF: ${{ secrets.CF_API_TOKEN }}
+      APPLY: ${{ inputs.apply }}
+    steps:
+      - name: Cloudflare API
+        run: |
+          AUTH="Authorization: Bearer $CF"
+          CT="Content-Type: application/json"
+          BASE="https://api.cloudflare.com/client/v4"
+          echo "== token verify =="
+          curl -s -H "$AUTH" "$BASE/user/tokens/verify" | jq -c '{success, status: (.result.status // "?"), errors}'
+          for Z in tashykollections.com tashykollections.org; do
+            echo ""
+            echo "================ $Z ================"
+            ZJSON=$(curl -s -H "$AUTH" "$BASE/zones?name=$Z")
+            ID=$(echo "$ZJSON" | jq -r '.result[0].id // empty')
+            STATUS=$(echo "$ZJSON" | jq -r '.result[0].status // "NOT_FOUND_IN_ACCOUNT"')
+            echo "zone status: $STATUS"
+            echo "cloudflare nameservers: $(echo "$ZJSON" | jq -r '.result[0].name_servers // [] | join("  ")')"
+            if [ -z "$ID" ]; then echo "(zone not added to this Cloudflare account yet — add it in the dashboard first)"; continue; fi
+            echo "-- current DNS records --"
+            curl -s -H "$AUTH" "$BASE/zones/$ID/dns_records?per_page=100" | jq -r '.result[] | "   \(.type)\t\(.name)\t-> \(.content)\tproxied=\(.proxied)"'
+            echo "-- current SSL mode: $(curl -s -H "$AUTH" "$BASE/zones/$ID/settings/ssl" | jq -r '.result.value')"
+            if [ "$APPLY" = "true" ]; then
+              echo "-- APPLY: SSL=flexible --"
+              curl -s -X PATCH -H "$AUTH" -H "$CT" --data '{"value":"flexible"}' "$BASE/zones/$ID/settings/ssl" | jq -c '{success, value: .result.value}'
+              echo "-- APPLY: always_use_https=on --"
+              curl -s -X PATCH -H "$AUTH" -H "$CT" --data '{"value":"on"}' "$BASE/zones/$ID/settings/always_use_https" | jq -c '{success, value: .result.value}'
+              echo "-- APPLY: proxy the web A/AAAA records (@ and www) --"
+              curl -s -H "$AUTH" "$BASE/zones/$ID/dns_records?per_page=100" \
+                | jq -r '.result[] | select((.type=="A" or .type=="AAAA") and (.name=="'"$Z"'" or .name=="www.'"$Z"'")) | .id' \
+                | while read -r rid; do
+                    curl -s -X PATCH -H "$AUTH" -H "$CT" --data '{"proxied":true}' "$BASE/zones/$ID/dns_records/$rid" | jq -c '{name: .result.name, type: .result.type, proxied: .result.proxied}'
+                  done
+            fi
+          done
