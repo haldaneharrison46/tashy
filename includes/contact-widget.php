@@ -9,9 +9,9 @@
 // Until then, only the free quick-contact buttons render.
 // ============================================================
 
-$tkPhoneIntl = '+18764870686';   // tel: / sms:  (E.164)
-$tkPhoneWa   = '18764870686';    // wa.me        (digits only, no +)
-$tkPhoneShow = '+1 (876) 487-0686';
+$tkPhoneWa   = function_exists('store_phone_e164') ? store_phone_e164() : '18764870686';  // wa.me (digits, no +)
+$tkPhoneIntl = '+' . $tkPhoneWa;                                                          // tel: / sms: (E.164)
+$tkPhoneShow = function_exists('store_phone')      ? store_phone()      : '+1 (876) 487-0686';
 $tkWaText    = rawurlencode('Hi ' . (defined('SITE_NAME') ? SITE_NAME : 'there') . '! I have a question.');
 $tkEmail     = defined('SITE_EMAIL') ? SITE_EMAIL : 'order@tashykollections.com';
 $tidioKey    = defined('TIDIO_KEY') ? trim((string) TIDIO_KEY) : '';

@@ -41,7 +41,7 @@ $_bodyClass = $bodyClass ?? '';
   <meta name="twitter:description" content="<?= h($_desc) ?>">
   <meta name="twitter:image" content="<?= h($_ogImg) ?>">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"Store","name":<?= json_encode(SITE_NAME) ?>,"url":<?= json_encode(SITE_URL) ?>,"image":<?= json_encode($_ogImg) ?>,"email":<?= json_encode(defined('SITE_EMAIL')?SITE_EMAIL:'') ?>,"telephone":"+1-876-487-0686","address":{"@type":"PostalAddress","streetAddress":"37 Cornwall Street","addressLocality":"Falmouth","addressRegion":"Trelawny","addressCountry":"JM"}}
+  {"@context":"https://schema.org","@type":"Store","name":<?= json_encode(SITE_NAME) ?>,"url":<?= json_encode(SITE_URL) ?>,"image":<?= json_encode($_ogImg) ?>,"email":<?= json_encode(defined('SITE_EMAIL')?SITE_EMAIL:'') ?>,"telephone":<?= json_encode('+' . store_phone_e164()) ?>,"address":{"@type":"PostalAddress","streetAddress":<?= json_encode(store_address()) ?>,"addressCountry":"JM"}}
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">

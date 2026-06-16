@@ -482,6 +482,14 @@ function setting_bool(string $key, bool $default = false): bool {
     return $v === '1' || $v === 'on' || $v === 'true';
 }
 function store_slogan(): string { return (string)get_setting('store_slogan', ''); }
+function store_address(): string { return get_setting('store_address', defined('SITE_ADDRESS') ? SITE_ADDRESS : ''); }
+function store_phone(): string { return get_setting('store_phone', '+1 (876) 487-0686'); }
+// Digits with Jamaica country code, for tel:/wa.me links.
+function store_phone_e164(): string {
+    $d = preg_replace('/\D+/', '', store_phone());
+    if (strlen($d) === 10) $d = '1' . $d;   // add +1 if a bare 10-digit number
+    return $d;
+}
 
 // ── Vendors / suppliers ───────────────────────────────────────
 function get_vendors(bool $activeOnly = false): array {

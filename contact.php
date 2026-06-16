@@ -56,7 +56,7 @@ require_once __DIR__ . '/includes/header.php';
           </span>
           <div>
             <h5>Store Address</h5>
-            <p>37 Cornwall Street<br>Falmouth, Trelawny<br>Jamaica</p>
+            <p><?= str_replace(', ', '<br>', h(store_address())) ?></p>
           </div>
         </div>
 
@@ -76,7 +76,7 @@ require_once __DIR__ . '/includes/header.php';
           </span>
           <div>
             <h5>Phone / WhatsApp</h5>
-            <p><a href="tel:+18764870686" style="color:inherit">+1 (876) 487-0686</a></p>
+            <p><a href="tel:+<?= h(store_phone_e164()) ?>" style="color:inherit"><?= h(store_phone()) ?></a></p>
           </div>
         </div>
 
@@ -127,8 +127,8 @@ require_once __DIR__ . '/includes/header.php';
     <!-- Map -->
     <div style="margin-top:48px;border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm)">
       <iframe
-        title="<?= h(SITE_NAME) ?> — 37 Cornwall Street, Falmouth"
-        src="https://www.google.com/maps?q=37+Cornwall+Street,+Falmouth,+Trelawny,+Jamaica&output=embed"
+        title="<?= h(SITE_NAME) ?> — <?= h(store_address()) ?>"
+        src="https://www.google.com/maps?q=<?= urlencode(store_address()) ?>&output=embed"
         width="100%" height="380" style="border:0;display:block" loading="lazy"
         referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
     </div>

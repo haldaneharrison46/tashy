@@ -44,7 +44,7 @@ require_once __DIR__ . '/includes/header.php';
         </table>
         <p>
           You'll receive a confirmation at the email address on your order, and our team will contact you with
-          delivery updates. Local pickup is available from our store at 37 Cornwall Street, Falmouth, Trelawny —
+          delivery updates. Local pickup is available from our store at <?= h(store_address()) ?> —
           just let us know at checkout.
         </p>
 
@@ -94,7 +94,7 @@ require_once __DIR__ . '/includes/header.php';
         <p>
           Orders are subject to acceptance and availability. In the rare event an item is out of stock after you
           order, we'll contact you to arrange a replacement or refund. Questions about these terms? Reach us at
-          <a href="mailto:<?= h(SITE_EMAIL) ?>"><?= h(SITE_EMAIL) ?></a> or call +1 (876) 487-0686.
+          <a href="mailto:<?= h(SITE_EMAIL) ?>"><?= h(SITE_EMAIL) ?></a> or call <?= h(store_phone()) ?>.
         </p>
 
       </div>
