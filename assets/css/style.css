@@ -2501,3 +2501,44 @@ select.form-control { cursor: pointer; }
   .shop-search-bar input, .shop-search-bar .form-control { min-width: 0; flex: 1 1 auto; }
   .shop-search-bar .btn { flex: 0 0 auto; white-space: nowrap; }
 }
+
+/* ============================================================
+   MOBILE CENTERING POLISH
+   Centre page content site-wide, centre the contact form, and
+   centre the shop / category product grid so it fits any screen.
+   `.shop-main .product-grid` (two classes) outranks the earlier
+   single-class `.product-grid` rules, so no !important needed.
+   ============================================================ */
+
+/* Shop & category: centre the items, always 2-up, never overflow.
+   minmax(0,240px) lets each card shrink to fit small screens and
+   caps its width so a pair (or a lone last card) centres instead of
+   stretching edge-to-edge. Kicks in where the sidebar stacks (900px). */
+@media (max-width: 900px) {
+  .shop-main .product-grid {
+    grid-template-columns: repeat(2, minmax(0, 240px));
+    justify-content: center;
+    gap: clamp(10px, 3vw, 18px);
+  }
+  .shop-main .product-grid > .product-card { min-width: 0; width: 100%; }
+  .product-name { overflow-wrap: break-word; }
+}
+
+/* General + contact centring on phones */
+@media (max-width: 640px) {
+  /* 1) Centre every page's section intros */
+  .section-title,
+  .section-sub { text-align: center; }
+
+  /* 2) Contact page — centre the form card and its heading */
+  .contact-grid { grid-template-columns: 1fr; text-align: center; justify-items: center; }
+  .contact-info-card,
+  .contact-form-card {
+    width: 100%; max-width: 540px;
+    margin-left: auto; margin-right: auto;
+  }
+  .contact-form-card > h3 { text-align: center; }
+  /* …but keep the labels/fields left-aligned for normal form reading */
+  .contact-form-card form,
+  .contact-form-card .form-grid { text-align: left; }
+}
