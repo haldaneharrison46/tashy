@@ -4,18 +4,19 @@ param(
     [string]$User      = "a1229881",        # root chroot (/) user — can reach /shan
     [string]$Server    = "access-5020587559.webspace-host.com",
     [int]   $Port      = 22,
-    [string]$RemoteDir = "/shan",           # tashykollections.online lives here
+    [string]$RemoteDir = "/tashy",          # tashykollections.online lives here
     [switch]$Mirror                          # add -Mirror to also DELETE remote files missing locally
 )
 # ============================================================
 #  Tashy Kollections - Deploy to  tashykollections.online
-#  .online is served from the  /shan  folder of the SAME IONOS webspace
-#  that serves tashykollections.com (root /). Verified 2026-06-16 map:
+#  .online is served from the  /tashy  folder of the SAME IONOS webspace
+#  that serves tashykollections.com (root /). Domain->folder map confirmed
+#  by the site owner 2026-06-16 (the per-folder configs were swapped and
+#  have since been corrected):
 #       /       -> tashykollections.com     (DB dbs15760212)
-#       /shan   -> tashykollections.online  (DB dbs15760212, shared)
-#       /tashy  -> tashykollections.org      (DB dbs15785127) -- do NOT deploy here
-#  Reach /shan with the ROOT chroot user (a1229881). The a1645260 user is
-#  chrooted to /tashy (=.org) and CANNOT update .online.
+#       /tashy  -> tashykollections.online  (DB dbs15760212, shared w/.com)
+#       /shan   -> tashykollections.org      (DB dbs15785127) -- separate store
+#  Reach /tashy with the ROOT chroot user (a1229881).
 #
 #  SAFETY: config/db.php is excluded (each folder has its own correct
 #  SITE_URL/DB) and remote files are NOT deleted unless you pass -Mirror
