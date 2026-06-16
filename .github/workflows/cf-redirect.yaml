@@ -1,0 +1,27 @@
+name: "Maintenance: redirect .com to .online"
+
+on:
+  workflow_dispatch:
+
+jobs:
+  redirect:
+    runs-on: ubuntu-latest
+    env:
+      CF: ${{ secrets.CF_API_TOKEN }}
+    steps:
+      - name: Create .com -> .online forwarding rule
+        run: |
+          AUTH="Authorization: Bearer $CF"; CT="Content-Type: application/json"; BASE="https://api.cloudflare.com/client/v4"
+          ID=$(curl -s -H "$AUTH" "$BASE/zones?name=tashykollections.com" | jq -r '.result[0].id // empty')
+          echo "zone id: $ID"
+          if [ -z "$ID" ]; then echo "zone not found"; exit 1; fi
+          echo "-- existing page rules (removing any first) --"
+          curl -s -H "$AUTH" "$BASE/zones/$ID/pagerules" | jq -r '.result[]?.id' | while read -r pr; do
+            curl -s -X DELETE -H "$AUTH" "$BASE/zones/$ID/pagerules/$pr" | jq -c '{deleted: .success, id: .result.id}'
+          done
+          echo "-- create forwarding rule .com/* -> https://tashykollections.online/\$2 --"
+          curl -s -X POST -H "$AUTH" -H "$CT" "$BASE/zones/$ID/pagerules" \
+            --data '{"targets":[{"target":"url","constraint":{"operator":"matches","value":"*tashykollections.com/*"}}],"actions":[{"id":"forwarding_url","value":{"url":"https://tashykollections.online/$2","status_code":301}}],"status":"active"}' \
+            | jq -c '{success, id: .result.id, errors}'
+          echo "-- rules now --"
+          curl -s -H "$AUTH" "$BASE/zones/$ID/pagerules" | jq -c '.result[]? | {targets: [.targets[].constraint.value], action: .actions[0].value}'
