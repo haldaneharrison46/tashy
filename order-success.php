@@ -21,7 +21,23 @@ require_once __DIR__ . '/includes/header.php';
       <p><strong>Order #:</strong> <?= h($order['order_number']) ?></p>
       <p><strong>Total:</strong> <?= money($order['total']) ?></p>
       <p><strong>Delivering to:</strong> <?= h($order['ship_address']) ?>, <?= h($order['ship_city']) ?>, <?= h($order['ship_parish']) ?></p>
-      <p><strong>Payment:</strong> Cash on Delivery</p>
+      <?php
+        $pm = $order['payment_method'] ?? 'cod';
+        $pmLabels = ['cod'=>'Cash on Delivery','transfer'=>'Bank Transfer','card'=>'Card','paypal'=>'PayPal'];
+      ?>
+      <p><strong>Payment:</strong> <?= h($pmLabels[$pm] ?? ucfirst($pm)) ?></p>
+      <?php if ($pm === 'transfer' && trim((string)get_setting('bank_transfer_details','')) !== ''): ?>
+      <p style="margin-top:8px;white-space:pre-wrap;font-size:0.9rem"><strong>Transfer details:</strong><br><?= h(get_setting('bank_transfer_details','')) ?></p>
+      <p style="font-size:0.85rem;color:#888;margin-top:4px">Use your order number <strong><?= h($order['order_number']) ?></strong> as the reference.</p>
+      <?php elseif ($pm === 'paypal'): $ppl = paypal_link((float)$order['total']); ?>
+        <?php if ($ppl): ?>
+        <a href="<?= h($ppl) ?>" target="_blank" rel="noopener" class="btn btn-primary" style="margin-top:12px">Pay <?= money($order['total']) ?> with PayPal →</a>
+        <?php elseif (trim((string)get_setting('paypal_email','')) !== ''): ?>
+        <p style="margin-top:8px;font-size:0.9rem">Send your PayPal payment to <strong><?= h(get_setting('paypal_email','')) ?></strong> (reference <?= h($order['order_number']) ?>).</p>
+        <?php endif; ?>
+      <?php elseif ($pm === 'card' && trim((string)get_setting('card_instructions','')) !== ''): ?>
+      <p style="margin-top:8px;font-size:0.9rem"><?= h(get_setting('card_instructions','')) ?></p>
+      <?php endif; ?>
     </div>
     <?php else: ?>
     <p style="margin-top:12px;color:#666">Your order has been placed successfully.</p>

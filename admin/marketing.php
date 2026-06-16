@@ -104,6 +104,7 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
     if ($editId) { $st = $pdo->prepare('SELECT * FROM marketing_posts WHERE id=?'); $st->execute([$editId]); $p = $st->fetch() ?: $p; }
     $sel     = array_filter(array_map('trim', explode(',', $p['platforms'] ?? '')));
     $selProd = array_filter(array_map('trim', explode(',', $p['product_ids'] ?? '')));
+    $marketingPresets = get_preset_messages('marketing');
     $err = flash('error');
 ?>
 <div style="margin-bottom:18px"><a href="marketing.php" style="color:var(--rose-gold)">&larr; Back to Marketing</a></div>
@@ -135,6 +136,12 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
       <div class="form-group"><label class="form-label">Internal title (optional)</label>
         <input type="text" name="title" class="form-control" value="<?= h($p['title']) ?>" placeholder="e.g. Weekend candle promo"></div>
       <div class="form-group"><label class="form-label">Post text *</label>
+        <?php if (!empty($marketingPresets)): ?>
+        <select id="mPreset" class="form-control" style="margin-bottom:6px">
+          <option value="">Insert a preset caption…</option>
+          <?php foreach ($marketingPresets as $pm): ?><option value="<?= h($pm['body']) ?>"><?= h($pm['title']) ?></option><?php endforeach; ?>
+        </select>
+        <?php endif; ?>
         <textarea name="body" id="mBody" class="form-control" rows="5" required placeholder="Write your caption, or generate with AI →"><?= h($p['body']) ?></textarea></div>
       <div class="form-group"><label class="form-label">Hashtags</label>
         <input type="text" name="hashtags" id="mTags" class="form-control" value="<?= h($p['hashtags']) ?>" placeholder="#homedecor #jamaica"></div>
@@ -159,9 +166,28 @@ if ($action === 'new' || ($editId && ($action === 'edit'))) {
       <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
         <button type="submit" name="mode" value="draft" class="btn btn-outline">Save Draft</button>
         <button type="submit" name="mode" value="schedule" class="btn btn-outline">Schedule</button>
-        <button type="submit" name="mode" value="publish" class="btn btn-primary">Publish Now</button>
+        <button type="submit" name="mode" value="publish" id="btnPublish" class="btn btn-primary">Publish Now</button>
       </div>
     </form>
+  </div>
+
+  <!-- Publish confirmation / preview modal -->
+  <div id="pubModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:#fff;border-radius:12px;max-width:440px;width:100%;padding:22px;max-height:90vh;overflow:auto">
+      <h3 style="margin-bottom:6px">Review before publishing</h3>
+      <p style="font-size:0.82rem;color:#888;margin-bottom:14px">This goes out to: <strong id="pmPlatforms">—</strong></p>
+      <div style="border:1px solid var(--grey-light);border-radius:10px;overflow:hidden;margin-bottom:16px">
+        <img id="pmImg" alt="" style="width:100%;max-height:220px;object-fit:cover;display:none">
+        <div style="padding:12px">
+          <div id="pmBody" style="font-size:0.88rem;white-space:pre-wrap;color:#333"></div>
+          <div id="pmTags" style="font-size:0.8rem;color:#1d4ed8;margin-top:6px"></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn btn-outline" id="pmCancel">Back to edit</button>
+        <button type="button" class="btn btn-primary" id="pmConfirm">Confirm &amp; Publish</button>
+      </div>
+    </div>
   </div>
 
   <div style="display:flex;flex-direction:column;gap:22px">
@@ -306,6 +332,47 @@ if (genBtn) genBtn.addEventListener('click', async () => {
 // Live preview bindings
 ['mBody','mTags','mImage'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
 (function(){ const pp = document.getElementById('aiPlatform'); if (pp) pp.addEventListener('change', updatePreview); })();
+
+// Preset caption insert
+(function(){
+  const sel = document.getElementById('mPreset'); if (!sel) return;
+  const STORE = <?= json_encode(SITE_NAME) ?>;
+  sel.addEventListener('change', function(){
+    if (!sel.value) return;
+    const txt = sel.value.replace(/\{store\}/g, STORE);
+    const body = document.getElementById('mBody');
+    body.value = body.value.trim() ? (body.value.trim() + '\n\n' + txt) : txt;
+    sel.value = ''; updatePreview();
+  });
+})();
+
+// Preview-before-publish confirmation
+(function(){
+  const btn = document.getElementById('btnPublish'), modal = document.getElementById('pubModal');
+  if (!btn || !modal) return;
+  function platformLabels(){
+    const labels = {facebook:'Facebook',instagram:'Instagram',twitter:'Twitter / X',whatsapp:'WhatsApp',webhook:'Automation Webhook'};
+    return [...document.querySelectorAll('input[name="platforms[]"]:checked')].map(c => labels[c.value] || c.value);
+  }
+  btn.addEventListener('click', function(e){
+    if (btn.dataset.ok === '1') return;          // confirmed → allow native submit
+    e.preventDefault();
+    const body = document.getElementById('mBody').value.trim();
+    if (!body) { document.getElementById('mBody').focus(); return; }
+    const plats = platformLabels();
+    document.getElementById('pmPlatforms').textContent = plats.length ? plats.join(', ') : 'no platforms selected (saved only)';
+    document.getElementById('pmBody').textContent = body;
+    document.getElementById('pmTags').textContent = document.getElementById('mTags').value.trim();
+    const img = document.getElementById('pmImg'), src = pvImgSrc(document.getElementById('mImage').value.trim());
+    if (src){ img.src = src; img.style.display=''; } else img.style.display='none';
+    modal.style.display = 'flex';
+  });
+  document.getElementById('pmCancel').addEventListener('click', () => modal.style.display='none');
+  modal.addEventListener('click', e => { if (e.target === modal) modal.style.display='none'; });
+  document.getElementById('pmConfirm').addEventListener('click', function(){
+    btn.dataset.ok = '1'; modal.style.display='none'; btn.click();
+  });
+})();
 updatePreview();
 </script>
 <?php require_once __DIR__ . '/footer.php'; exit; }

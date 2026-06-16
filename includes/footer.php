@@ -6,7 +6,7 @@
     <div class="footer-grid">
       <div class="footer-brand">
         <div class="footer-logo"><?= tk_logo(210) ?></div>
-        <p class="footer-tagline">Bedding, home essentials &amp; fragrances — proudly Jamaican.</p>
+        <p class="footer-tagline"><?= h(store_slogan() ?: 'Bedding, home essentials & fragrances — proudly Jamaican.') ?></p>
         <address class="footer-address">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:4px"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
           <?= SITE_ADDRESS ?>
@@ -42,6 +42,7 @@
           <li><a href="<?= asset_base() ?>/contact.php">Contact Us</a></li>
           <li><a href="<?= asset_base() ?>/policy.php">Shipping &amp; Returns</a></li>
           <li><a href="<?= asset_base() ?>/wholesale.php">Wholesale B2B</a></li>
+          <li><a href="<?= asset_base() ?>/blog.php">Journal</a></li>
           <li><a href="<?= asset_base() ?>/about.php">About Us</a></li>
           <?php if (current_user()): ?>
           <li><a href="<?= asset_base() ?>/account.php">My Account</a></li>

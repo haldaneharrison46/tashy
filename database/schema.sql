@@ -24,6 +24,7 @@ CREATE TABLE IF NOT EXISTS users (
   address       VARCHAR(255)     DEFAULT NULL,
   role          ENUM('customer','admin') NOT NULL DEFAULT 'customer',
   active        TINYINT(1)       NOT NULL DEFAULT 1,
+  tax_exempt    TINYINT(1)       NOT NULL DEFAULT 0,   -- never charge GCT for this customer
   admin_pin_hash VARCHAR(255)    DEFAULT NULL,  -- optional quick-login PIN (staff)
   created_at    TIMESTAMP        NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -70,6 +71,7 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS products (
   id            INT UNSIGNED    AUTO_INCREMENT PRIMARY KEY,
   category_id   INT UNSIGNED    DEFAULT NULL,
+  vendor_id     INT UNSIGNED    DEFAULT NULL,   -- supplier / vendor
   name          VARCHAR(200)    NOT NULL,
   slug          VARCHAR(200)    NOT NULL UNIQUE,
   brand         VARCHAR(100)    DEFAULT NULL,
@@ -84,6 +86,7 @@ CREATE TABLE IF NOT EXISTS products (
   tags          VARCHAR(500)    DEFAULT NULL,
   featured      TINYINT(1)      NOT NULL DEFAULT 0,
   active        TINYINT(1)      NOT NULL DEFAULT 1,
+  taxable       TINYINT(1)      NOT NULL DEFAULT 1,   -- charge GCT on this item
   created_at    TIMESTAMP       NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL,
   INDEX idx_category (category_id),
@@ -129,6 +132,9 @@ CREATE TABLE IF NOT EXISTS orders (
   ship_city    VARCHAR(100)   DEFAULT NULL,
   ship_parish  VARCHAR(100)   DEFAULT NULL,
   ship_country VARCHAR(100)   NOT NULL DEFAULT 'Jamaica',
+  ship_date    DATE           DEFAULT NULL,         -- scheduled delivery date
+  tracking_number VARCHAR(100) DEFAULT NULL,
+  carrier      VARCHAR(80)    DEFAULT NULL,
   notes        TEXT           DEFAULT NULL,
   followup_channel VARCHAR(20) DEFAULT NULL,
   followup_note    VARCHAR(255) DEFAULT NULL,
@@ -261,6 +267,70 @@ CREATE TABLE IF NOT EXISTS return_items (
   FOREIGN KEY (return_id) REFERENCES returns(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Blog Posts ───────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS blog_posts (
+  id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  title        VARCHAR(200)  NOT NULL,
+  slug         VARCHAR(200)  NOT NULL UNIQUE,
+  excerpt      VARCHAR(500)  DEFAULT NULL,
+  body         MEDIUMTEXT    NOT NULL,
+  cover_image  VARCHAR(255)  DEFAULT NULL,
+  tags         VARCHAR(500)  DEFAULT NULL,
+  status       ENUM('draft','published') NOT NULL DEFAULT 'draft',
+  author_id    INT UNSIGNED  DEFAULT NULL,
+  published_at DATETIME      DEFAULT NULL,
+  created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_status (status),
+  INDEX idx_published (published_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Vendors / Suppliers ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS vendors (
+  id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  name         VARCHAR(150)  NOT NULL,
+  contact_name VARCHAR(120)  DEFAULT NULL,
+  email        VARCHAR(150)  DEFAULT NULL,
+  phone        VARCHAR(40)   DEFAULT NULL,
+  address      VARCHAR(255)  DEFAULT NULL,
+  notes        TEXT          DEFAULT NULL,
+  active       TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Inventory Receiving ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS inventory_receipts (
+  id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  vendor_id   INT UNSIGNED  DEFAULT NULL,
+  reference   VARCHAR(80)   DEFAULT NULL,
+  note        VARCHAR(255)  DEFAULT NULL,
+  total_cost  DECIMAL(10,2) NOT NULL DEFAULT 0,
+  received_by VARCHAR(100)  DEFAULT NULL,
+  created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_vendor (vendor_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS inventory_receipt_items (
+  id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  receipt_id  INT UNSIGNED  NOT NULL,
+  product_id  INT UNSIGNED  DEFAULT NULL,
+  name        VARCHAR(200)  NOT NULL,
+  quantity    INT           NOT NULL DEFAULT 0,
+  unit_cost   DECIMAL(10,2) NOT NULL DEFAULT 0,
+  INDEX idx_receipt (receipt_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Preset (canned) Messages ─────────────────────────────────
+CREATE TABLE IF NOT EXISTS preset_messages (
+  id         INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+  scope      VARCHAR(20)   NOT NULL DEFAULT 'pos',   -- pos | order | marketing
+  title      VARCHAR(120)  NOT NULL,
+  body       TEXT          NOT NULL,
+  sort_order INT           NOT NULL DEFAULT 0,
+  created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_scope (scope)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 -- ============================================================
@@ -271,6 +341,32 @@ SET FOREIGN_KEY_CHECKS = 1;
 INSERT IGNORE INTO settings (skey, sval) VALUES
   ('default_shipping_rate',   '1500'),
   ('free_shipping_threshold', '5000'),
+  ('tax_enabled',             '1'),
+  ('tax_rate',                '15'),
+  ('tax_label',               'GCT'),
+  ('tax_country',             'Jamaica'),
+  ('store_phone',             '+1-876-487-0686'),
+  ('store_hours',             'Mon–Sat 9am–6pm'),
+  ('store_slogan',            'Bedding, home essentials & fragrances — proudly Jamaican.'),
+  ('receipt_header',          ''),
+  ('receipt_footer',          'Thank you for shopping with us!'),
+  ('receipt_width',           '80'),
+  ('print_copies',            '1'),
+  ('auto_print',              '0'),
+  ('pay_cod_enabled',         '1'),
+  ('pay_transfer_enabled',    '1'),
+  ('pay_card_enabled',        '0'),
+  ('pay_paypal_enabled',      '0'),
+  ('bank_transfer_details',   ''),
+  ('card_instructions',       ''),
+  ('paypal_me',               ''),
+  ('paypal_email',            ''),
+  ('mail_method',             'mail'),
+  ('smtp_port',               '587'),
+  ('smtp_secure',             'tls'),
+  ('announcement_enabled',    '0'),
+  ('announcement_text',       ''),
+  ('announcement_speed',      '18'),
   ('marketing_ai_model',      'claude-opus-4-8'),
   ('ai_provider',             'openai'),
   ('ai_base_url',             'https://api.groq.com/openai/v1'),

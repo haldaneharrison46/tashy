@@ -263,7 +263,7 @@ $codesBlock = '<div class="codes"><svg id="bc"></svg><div class="qrcode" style="
     <div class="row"><span>Subtotal</span><span><?= $j($o['subtotal']) ?></span></div>
     <?php if (($o['discount'] ?? 0) > 0): ?><div class="row"><span>Discount</span><span>−<?= $j($o['discount']) ?></span></div><?php endif; ?>
     <div class="row"><span>Shipping</span><span><?= $o['shipping'] > 0 ? $j($o['shipping']) : 'FREE' ?></span></div>
-    <div class="row"><span>GCT (15%)</span><span><?= $j($o['tax']) ?></span></div>
+    <?php if (($o['tax'] ?? 0) > 0): ?><div class="row"><span><?= h(tax_display_label()) ?></span><span><?= $j($o['tax']) ?></span></div><?php endif; ?>
     <div class="row grand"><span>Total</span><span><?= $j($o['total']) ?></span></div>
     <?php if ($o['amount_paid'] !== null): ?>
     <div class="row" style="margin-top:6px"><span>Paid</span><span><?= $j($o['amount_paid']) ?></span></div>

@@ -13,9 +13,18 @@ $parishes = ['Kingston','St. Andrew','St. Thomas','Portland','St. Mary','St. Ann
              'Trelawny','St. James','Hanover','Westmoreland','St. Elizabeth',
              'Manchester','Clarendon','St. Catherine'];
 
+// Country list — Jamaica first (the tax country); other destinations are exempt from GCT.
+$countries = ['Jamaica','United States','Canada','United Kingdom','Cayman Islands',
+              'Trinidad and Tobago','Barbados','Bahamas','Other'];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_check();
     $f = $_POST;
+
+    $country = trim($f['country'] ?? 'Jamaica') ?: 'Jamaica';
+    $isTaxCountry = strcasecmp($country, tax_country()) === 0;
+    $payMethods = enabled_payment_methods();
+    $payment    = array_key_exists($f['payment'] ?? '', $payMethods) ? $f['payment'] : (string)array_key_first($payMethods);
 
     // Validate
     if (empty($f['name']))    $errors[] = 'Full name is required.';
@@ -23,27 +32,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($f['phone']))   $errors[] = 'Phone number required.';
     if (empty($f['address'])) $errors[] = 'Delivery address required.';
     if (empty($f['city']))    $errors[] = 'City / Community required.';
-    if (empty($f['parish']))  $errors[] = 'Parish required.';
+    if ($isTaxCountry && empty($f['parish'])) $errors[] = 'Parish required.';
 
     if (empty($errors)) {
-        // Apply the parish-specific shipping zone rate now that the parish is known.
-        $shipCharge = shipping_for_parish($f['parish'], $totals['subtotal']);
-        $orderTotal = $totals['subtotal'] + $shipCharge + $totals['tax'];
+        // Shipping: parish-zone rate within Jamaica; flat default rate abroad.
+        if ($isTaxCountry) {
+            $shipCharge = shipping_for_parish($f['parish'], $totals['subtotal']);
+        } else {
+            $thr = free_shipping_threshold();
+            $shipCharge = ($totals['subtotal'] > 0 && $thr > 0 && $totals['subtotal'] >= $thr) ? 0.0 : shipping_default_rate();
+        }
+        // GCT: per-item taxable base, customer exemption, destination country.
+        $exempt = customer_tax_exempt($user ? (int)$user['id'] : null);
+        $taxCharge  = compute_tax($totals['taxableBase'] ?? $totals['subtotal'], ['country' => $country, 'tax_exempt' => $exempt]);
+        $orderTotal = $totals['subtotal'] + $shipCharge + $taxCharge;
         $pdo = db();
         $pdo->beginTransaction();
         try {
             $orderNum = generate_order_number();
             $stmt = $pdo->prepare('INSERT INTO orders
-                (user_id, order_number, subtotal, shipping, tax, total, currency,
+                (user_id, order_number, subtotal, shipping, tax, total, currency, payment_method,
                  ship_name, ship_email, ship_phone, ship_address, ship_city, ship_parish, ship_country, notes)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             $stmt->execute([
                 $user ? $user['id'] : null,
                 $orderNum,
-                $totals['subtotal'], $shipCharge, $totals['tax'], $orderTotal,
-                CURRENCY,
+                $totals['subtotal'], $shipCharge, $taxCharge, $orderTotal,
+                CURRENCY, $payment,
                 $f['name'], $f['email'], $f['phone'],
-                $f['address'], $f['city'], $f['parish'], 'Jamaica',
+                $f['address'], $f['city'], ($f['parish'] ?? ''), $country,
                 trim($f['notes'] ?? ''),
             ]);
             $orderId = (int)$pdo->lastInsertId();
@@ -65,9 +82,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 send_order_emails([
                     'order_number' => $orderNum,
                     'subtotal' => $totals['subtotal'], 'shipping' => $shipCharge,
-                    'tax' => $totals['tax'], 'total' => $orderTotal,
+                    'tax' => $taxCharge, 'total' => $orderTotal,
                     'ship_name' => $f['name'], 'ship_email' => $f['email'], 'ship_phone' => $f['phone'],
-                    'ship_address' => $f['address'], 'ship_city' => $f['city'], 'ship_parish' => $f['parish'],
+                    'ship_address' => $f['address'], 'ship_city' => $f['city'], 'ship_parish' => ($f['parish'] ?? ''),
                 ], $totals['items']);
             } catch (Throwable $e) { /* don't block the order on email errors */ }
 
@@ -117,12 +134,20 @@ require_once __DIR__ . '/includes/header.php';
               <input type="text" name="address" class="form-control" required value="<?= h($_POST['address'] ?? '') ?>">
             </div>
             <div class="form-group">
+              <label class="form-label">Country *</label>
+              <select name="country" id="ckCountry" class="form-control" required>
+                <?php $selCountry = $_POST['country'] ?? 'Jamaica'; foreach ($countries as $cn): ?>
+                <option value="<?= h($cn) ?>" <?= ($selCountry === $cn) ? 'selected' : '' ?>><?= h($cn) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="form-group">
               <label class="form-label">City / Community *</label>
               <input type="text" name="city" class="form-control" required value="<?= h($_POST['city'] ?? '') ?>">
             </div>
-            <div class="form-group">
-              <label class="form-label">Parish *</label>
-              <select name="parish" class="form-control" required>
+            <div class="form-group" id="ckParishGroup">
+              <label class="form-label">Parish <span id="ckParishStar">*</span></label>
+              <select name="parish" id="ckParish" class="form-control" required>
                 <option value="">Select Parish</option>
                 <?php foreach ($parishes as $p): ?>
                 <option value="<?= h($p) ?>" <?= (($_POST['parish'] ?? '') === $p) ? 'selected' : '' ?>><?= h($p) ?></option>
@@ -138,14 +163,25 @@ require_once __DIR__ . '/includes/header.php';
 
         <div class="form-card" style="background:var(--white);border:1px solid var(--grey-light);border-radius:12px;padding:28px">
           <h3 style="margin-bottom:16px">Payment</h3>
-          <p style="color:#888;font-size:0.9rem;margin-bottom:12px">We accept payment on delivery (Cash / Bank Transfer). Online payment coming soon.</p>
-          <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
-            <input type="radio" name="payment" value="cod" checked> Cash / Pay on Delivery
-          </label>
+          <?php $methods = enabled_payment_methods(); $first = true; ?>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <?php foreach ($methods as $mk => $mlabel): ?>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+              <input type="radio" name="payment" value="<?= h($mk) ?>" <?= $first ? 'checked' : '' ?>> <?= h($mlabel) ?>
+              <?= $mk==='cod' ? '<span style="color:#888;font-size:0.85rem">— pay when it arrives</span>' : '' ?>
+            </label>
+            <?php $first = false; endforeach; ?>
+          </div>
+          <?php if (array_key_exists('transfer', $methods) && trim((string)get_setting('bank_transfer_details','')) !== ''): ?>
+          <p style="color:#888;font-size:0.82rem;margin-top:12px;white-space:pre-wrap"><strong>Bank transfer:</strong> <?= h(get_setting('bank_transfer_details','')) ?></p>
+          <?php endif; ?>
+          <?php if (array_key_exists('paypal', $methods)): ?>
+          <p style="color:#888;font-size:0.82rem;margin-top:10px">Choosing PayPal? You'll get a secure PayPal link on the next screen.</p>
+          <?php endif; ?>
         </div>
 
         <button type="submit" class="btn btn-primary" style="width:100%;margin-top:24px;font-size:1rem;padding:16px">
-          Place Order — <?= money($totals['total']) ?>
+          Place Order — <span id="ckBtnTotal"><?= money($totals['total']) ?></span>
         </button>
       </form>
 
@@ -165,12 +201,42 @@ require_once __DIR__ . '/includes/header.php';
         <div style="border-top:1px solid var(--grey-light);margin-top:12px;padding-top:12px">
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem"><span>Subtotal</span><span><?= money($totals['subtotal']) ?></span></div>
           <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem"><span>Shipping</span><span><?= $totals['shipping'] > 0 ? money($totals['shipping']) : 'FREE' ?></span></div>
-          <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem"><span>GCT</span><span><?= money($totals['tax']) ?></span></div>
-          <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem"><span>Total</span><span><?= money($totals['total']) ?></span></div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:0.88rem" id="ckTaxRow"><span><?= h(tax_label()) ?></span><span id="ckTaxVal"><?= money($totals['tax']) ?></span></div>
+          <div style="display:flex;justify-content:space-between;font-weight:700;font-size:1rem"><span>Total</span><span id="ckTotalVal"><?= money($totals['total']) ?></span></div>
         </div>
       </div>
     </div>
   </div>
 </div>
+
+<?php
+  $_cur = currency_config()[current_currency()];
+?>
+<script>
+(function(){
+  var TAX_COUNTRY = <?= json_encode(tax_country()) ?>;
+  var RATE        = <?= json_encode((float)$_cur['rate']) ?>;
+  var SYM         = <?= json_encode($_cur['symbol']) ?>;
+  var SUBTOTAL    = <?= json_encode((float)$totals['subtotal']) ?>;       // JMD
+  var SHIPPING    = <?= json_encode((float)$totals['shipping']) ?>;       // JMD (estimate)
+  var TAX_JMD     = <?= json_encode((float)$totals['tax']) ?>;           // JMD when taxed
+  function fmt(jmd){ return SYM + (jmd * RATE).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  var country = document.getElementById('ckCountry');
+  var parish  = document.getElementById('ckParish');
+  var star    = document.getElementById('ckParishStar');
+  function sync(){
+    var isTax = country.value.trim().toLowerCase() === TAX_COUNTRY.toLowerCase();
+    // Parish only required for the tax country (Jamaica).
+    if (parish){ parish.required = isTax; }
+    if (star){ star.style.display = isTax ? '' : 'none'; }
+    var tax = isTax ? TAX_JMD : 0;
+    document.getElementById('ckTaxVal').textContent = fmt(tax);
+    var total = SUBTOTAL + SHIPPING + tax;
+    document.getElementById('ckTotalVal').textContent = fmt(total);
+    document.getElementById('ckBtnTotal').textContent = fmt(total);
+  }
+  if (country){ country.addEventListener('change', sync); sync(); }
+})();
+</script>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>

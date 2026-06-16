@@ -3,6 +3,95 @@ $pageTitle = 'Users';
 require_once __DIR__ . '/header.php';
 
 $pdo = db();
+$action = $_GET['action'] ?? 'list';
+$editId = (int)($_GET['id'] ?? 0);
+
+/* ── Save (add / edit) ─────────────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_user'])) {
+    csrf_check();
+    $id    = (int)($_POST['user_id'] ?? 0);
+    $name  = trim($_POST['name'] ?? '');
+    $email = strtolower(trim($_POST['email'] ?? ''));
+    $phone = trim($_POST['phone'] ?? '');
+    $role  = ($_POST['role'] ?? 'customer') === 'admin' ? 'admin' : 'customer';
+    $active= isset($_POST['active']) ? 1 : 0;
+    $pass  = (string)($_POST['password'] ?? '');
+
+    $err = '';
+    if ($name === '') $err = 'Name is required.';
+    elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) $err = 'A valid email is required.';
+    else {
+        $dup = $pdo->prepare('SELECT id FROM users WHERE email = ? AND id <> ?');
+        $dup->execute([$email, $id]);
+        if ($dup->fetch()) $err = 'Another account already uses that email.';
+    }
+    // Don't let an admin lock themselves out by demoting/deactivating self
+    if (!$err && $id === current_user()['id'] && ($role !== 'admin' || !$active)) {
+        $err = 'You cannot change your own role or active status here.';
+    }
+
+    if ($err) { flash('error', $err); }
+    elseif ($id) {
+        $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, role=?, active=? WHERE id=?')
+            ->execute([$name, $email, $phone ?: null, $role, $active, $id]);
+        if ($pass !== '') $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')
+            ->execute([password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]), $id]);
+        flash('success', 'User updated.');
+        redirect(asset_base() . '/admin/users.php');
+    } else {
+        $hash = password_hash($pass !== '' ? $pass : bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
+        $pdo->prepare('INSERT INTO users (name, email, phone, role, active, password_hash) VALUES (?,?,?,?,?,?)')
+            ->execute([$name, $email, $phone ?: null, $role, $active, $hash]);
+        flash('success', 'User added.');
+        redirect(asset_base() . '/admin/users.php');
+    }
+    redirect(asset_base() . '/admin/users.php' . ($id ? '?action=edit&id=' . $id : '?action=add'));
+}
+
+/* ── Add / edit form ───────────────────────── */
+$editU = null;
+if ($action === 'edit' && $editId) {
+    $st = $pdo->prepare('SELECT * FROM users WHERE id=?'); $st->execute([$editId]); $editU = $st->fetch();
+}
+if ($action === 'add' || $editU) {
+    $uu = $editU ?? ['id'=>0,'name'=>'','email'=>'','phone'=>'','role'=>'admin','active'=>1];
+    $err = flash('error');
+    ?>
+    <div style="margin-bottom:18px"><a href="users.php" style="color:var(--rose-gold)">&larr; Back to Users</a></div>
+    <?php if ($err): ?><div class="badge-danger" style="padding:12px 16px;border-radius:8px;margin-bottom:16px;display:block"><?= h($err) ?></div><?php endif; ?>
+    <div class="admin-card" style="max-width:560px">
+      <h2><?= $editU ? 'Edit User' : 'Add Staff / User' ?></h2>
+      <form method="post">
+        <?= csrf_field() ?>
+        <input type="hidden" name="save_user" value="1">
+        <input type="hidden" name="user_id" value="<?= (int)$uu['id'] ?>">
+        <div class="admin-form-grid">
+          <div class="form-group full"><label class="form-label">Full Name *</label>
+            <input type="text" name="name" class="form-control" required value="<?= h($uu['name']) ?>"></div>
+          <div class="form-group"><label class="form-label">Email *</label>
+            <input type="email" name="email" class="form-control" required value="<?= h($uu['email']) ?>"></div>
+          <div class="form-group"><label class="form-label">Phone</label>
+            <input type="text" name="phone" class="form-control" value="<?= h($uu['phone'] ?? '') ?>"></div>
+          <div class="form-group"><label class="form-label">Role</label>
+            <select name="role" class="form-control">
+              <option value="admin"    <?= ($uu['role'] ?? '')==='admin'?'selected':'' ?>>Admin / Staff</option>
+              <option value="customer" <?= ($uu['role'] ?? '')==='customer'?'selected':'' ?>>Customer</option>
+            </select></div>
+          <div class="form-group"><label class="form-label"><?= $editU ? 'Reset password (optional)' : 'Password (optional — random if blank)' ?></label>
+            <input type="text" name="password" class="form-control" placeholder="<?= $editU ? 'Leave blank to keep current' : 'Auto-generated if blank' ?>"></div>
+          <div class="form-group full"><label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" name="active" value="1" <?= $uu['active'] ? 'checked' : '' ?>> Active (can sign in)</label></div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:18px">
+          <button type="submit" class="btn btn-primary"><?= $editU ? 'Save Changes' : 'Add User' ?></button>
+          <a href="users.php" class="btn btn-outline">Cancel</a>
+        </div>
+      </form>
+    </div>
+    <?php
+    require_once __DIR__ . '/footer.php';
+    exit;
+}
 
 /* ── Toggle admin role ─────────────────────── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_role'])) {
@@ -56,6 +145,7 @@ $ok = flash('success');
     <?php if ($search): ?><a href="users.php" class="btn btn-outline btn-sm">Clear</a><?php endif; ?>
   </form>
   <span style="color:#888;font-size:0.82rem;margin-left:auto"><?= count($users) ?> user(s)</span>
+  <a href="users.php?action=add" class="btn btn-primary">+ Add Staff</a>
 </div>
 
 <div class="admin-card" style="padding:0;overflow:hidden">
@@ -76,8 +166,9 @@ $ok = flash('success');
       <td style="font-weight:600"><?= money($u['total_spent']) ?></td>
       <td style="color:#888;font-size:0.8rem"><?= date('d M y', strtotime($u['created_at'])) ?></td>
       <td>
+        <a href="users.php?action=edit&id=<?= $u['id'] ?>" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:0.72rem">Edit</a>
         <?php if ($u['id'] !== current_user()['id']): ?>
-        <form method="post" style="display:inline">
+        <form method="post" style="display:inline;margin-left:6px">
           <?= csrf_field() ?>
           <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
           <button type="submit" name="toggle_role" class="btn btn-outline btn-sm" style="padding:3px 8px;font-size:0.72rem">
@@ -90,7 +181,7 @@ $ok = flash('success');
           <button type="submit" name="delete_user" class="btn btn-sm" style="background:#fef2f2;color:#c0392b;border:1px solid #fca5a5;padding:3px 8px;font-size:0.72rem">Delete</button>
         </form>
         <?php else: ?>
-        <span style="font-size:0.75rem;color:#888">(you)</span>
+        <span style="font-size:0.75rem;color:#888;margin-left:6px">(you)</span>
         <?php endif; ?>
       </td>
     </tr>

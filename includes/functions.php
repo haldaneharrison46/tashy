@@ -257,6 +257,66 @@ function set_setting(string $key, string $val): void {
                    ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute([$key, $val]);
 }
 
+// ── Schema introspection (safe before migrations run) ─────────
+// Returns true if a column exists. Lets new tax/blog code degrade
+// gracefully on an un-migrated database instead of throwing.
+function tk_column_exists(string $table, string $col): bool {
+    static $cache = [];
+    $k = $table . '.' . $col;
+    if (array_key_exists($k, $cache)) return $cache[$k];
+    try {
+        $st = db()->prepare("SHOW COLUMNS FROM `" . str_replace('`', '', $table) . "` LIKE ?");
+        $st->execute([$col]);
+        return $cache[$k] = (bool)$st->fetch();
+    } catch (Throwable $e) {
+        return $cache[$k] = false;
+    }
+}
+
+// ── Tax (GCT) ─────────────────────────────────────────────────
+// Tax is configurable in admin → Settings. It can be switched off
+// globally, charged only for the tax country (international orders
+// exempt), skipped for tax-exempt customers, and skipped per item
+// (products.taxable = 0). Falls back to the TAX_RATE constant.
+function tax_enabled(): bool {
+    return get_setting('tax_enabled', '1') === '1';
+}
+function tax_rate_pct(): float {
+    $v = get_setting('tax_rate', null);
+    if ($v !== null && $v !== '') return (float)$v;
+    return (defined('TAX_RATE') ? (float)TAX_RATE : 0.15) * 100;
+}
+function tax_rate(): float {            // as a fraction, e.g. 0.15
+    return tax_rate_pct() / 100;
+}
+function tax_label(): string {
+    return get_setting('tax_label', 'GCT') ?: 'GCT';
+}
+function tax_country(): string {
+    return get_setting('tax_country', 'Jamaica') ?: 'Jamaica';
+}
+// Display label with rate, e.g. "GCT (15%)" — for receipts/summaries.
+function tax_display_label(): string {
+    return tax_label() . ' (' . rtrim(rtrim(number_format(tax_rate_pct(), 2), '0'), '.') . '%)';
+}
+// Is the given customer (user id) flagged tax-exempt? Safe pre-migration.
+function customer_tax_exempt(?int $userId): bool {
+    if (!$userId || !tk_column_exists('users', 'tax_exempt')) return false;
+    try {
+        $st = db()->prepare('SELECT tax_exempt FROM users WHERE id = ?');
+        $st->execute([$userId]);
+        return (bool)$st->fetchColumn();
+    } catch (Throwable $e) { return false; }
+}
+// Tax owed on a taxable base. Options: country (destination), tax_exempt (bool).
+function compute_tax(float $taxableBase, array $opts = []): float {
+    if (!tax_enabled() || $taxableBase <= 0) return 0.0;
+    if (!empty($opts['tax_exempt'])) return 0.0;
+    $country = trim((string)($opts['country'] ?? tax_country()));
+    if ($country !== '' && strcasecmp($country, tax_country()) !== 0) return 0.0;
+    return round($taxableBase * tax_rate(), 2);
+}
+
 // ── Shipping ──────────────────────────────────────────────────
 function shipping_default_rate(): float {
     return (float)get_setting('default_shipping_rate', '1500');
@@ -333,4 +393,263 @@ function product_gallery(array $product): array {
         }
     }
     return array_values(array_unique(array_filter($imgs)));
+}
+
+// ── Shared image upload helper (validate + store) ─────────────
+// Mirrors admin/products.php's pf_save_image so other admin screens
+// (blog, etc.) can accept uploads. Returns one of:
+//   ['skip'=>true] | ['error'=>msg] | ['ok'=>true,'name'=>filename]
+function tk_save_image(array $file, string $base): array {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) return ['skip' => true];
+    if ($file['error'] !== UPLOAD_ERR_OK)       return ['error' => 'Upload failed (code ' . $file['error'] . ').'];
+    if (($file['size'] ?? 0) > 6 * 1024 * 1024) return ['error' => 'The image exceeds the 6 MB limit.'];
+    $info = @getimagesize($file['tmp_name']);
+    $map  = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif', IMAGETYPE_WEBP => 'webp'];
+    $ext  = $info ? ($map[$info[2]] ?? null) : null;
+    if (!$ext) return ['error' => 'Unsupported image type (use JPG, PNG, GIF, WebP).'];
+    $dir = dirname(__DIR__) . '/assets/images';
+    if (!is_dir($dir)) @mkdir($dir, 0775, true);
+    $name = (slugify($base) ?: 'image') . '-' . date('YmdHis') . '-' . bin2hex(random_bytes(2)) . '.' . $ext;
+    if (!@move_uploaded_file($file['tmp_name'], $dir . '/' . $name)) return ['error' => 'Could not save the uploaded image.'];
+    return ['ok' => true, 'name' => $name];
+}
+
+// ── Blog ──────────────────────────────────────────────────────
+function get_blog_posts(array $opts = []): array {
+    try {
+        $where = []; $params = [];
+        if (!empty($opts['published_only'])) $where[] = "status = 'published'";
+        if (!empty($opts['tag'])) { $where[] = 'tags LIKE ?'; $params[] = '%' . $opts['tag'] . '%'; }
+        $sql = 'SELECT * FROM blog_posts';
+        if ($where) $sql .= ' WHERE ' . implode(' AND ', $where);
+        $sql .= ' ORDER BY COALESCE(published_at, created_at) DESC';
+        if (!empty($opts['limit'])) {
+            $sql .= ' LIMIT ' . (int)$opts['limit'] . ' OFFSET ' . (int)($opts['offset'] ?? 0);
+        }
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll();
+    } catch (Throwable $e) { return []; }
+}
+function count_blog_posts(array $opts = []): int {
+    try {
+        $where = []; $params = [];
+        if (!empty($opts['published_only'])) $where[] = "status = 'published'";
+        if (!empty($opts['tag'])) { $where[] = 'tags LIKE ?'; $params[] = '%' . $opts['tag'] . '%'; }
+        $sql = 'SELECT COUNT(*) FROM blog_posts' . ($where ? ' WHERE ' . implode(' AND ', $where) : '');
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        return (int)$st->fetchColumn();
+    } catch (Throwable $e) { return 0; }
+}
+function get_blog_post_by_slug(string $slug, bool $publishedOnly = true): array|false {
+    try {
+        $sql = 'SELECT * FROM blog_posts WHERE slug = ?' . ($publishedOnly ? " AND status = 'published'" : '');
+        $st = db()->prepare($sql);
+        $st->execute([$slug]);
+        return $st->fetch();
+    } catch (Throwable $e) { return false; }
+}
+
+// ── Settings helpers (typed) ──────────────────────────────────
+function setting_bool(string $key, bool $default = false): bool {
+    $v = get_setting($key, $default ? '1' : '0');
+    return $v === '1' || $v === 'on' || $v === 'true';
+}
+function store_slogan(): string { return (string)get_setting('store_slogan', ''); }
+
+// ── Vendors / suppliers ───────────────────────────────────────
+function get_vendors(bool $activeOnly = false): array {
+    try {
+        $sql = 'SELECT * FROM vendors ' . ($activeOnly ? 'WHERE active = 1 ' : '') . 'ORDER BY name';
+        return db()->query($sql)->fetchAll();
+    } catch (Throwable $e) { return []; }
+}
+
+// ── Preset (canned) messages ──────────────────────────────────
+// scope: 'pos' (receipt share), 'order' (status updates), 'marketing'
+function get_preset_messages(string $scope): array {
+    try {
+        $st = db()->prepare('SELECT * FROM preset_messages WHERE scope = ? ORDER BY sort_order, id');
+        $st->execute([$scope]);
+        return $st->fetchAll();
+    } catch (Throwable $e) { return []; }
+}
+// Fill {name}/{order}/{total}/{store} placeholders in a preset.
+function fill_preset(string $body, array $vars): string {
+    foreach ($vars as $k => $v) $body = str_replace('{' . $k . '}', (string)$v, $body);
+    return $body;
+}
+
+// ── Payment methods ───────────────────────────────────────────
+function payment_methods(): array {
+    return [
+        'cod'      => ['label' => 'Cash on Delivery',  'setting' => 'pay_cod_enabled',      'default' => true],
+        'transfer' => ['label' => 'Bank Transfer',     'setting' => 'pay_transfer_enabled', 'default' => true],
+        'card'     => ['label' => 'Card',              'setting' => 'pay_card_enabled',     'default' => false],
+        'paypal'   => ['label' => 'PayPal',            'setting' => 'pay_paypal_enabled',   'default' => false],
+    ];
+}
+function enabled_payment_methods(): array {
+    $out = [];
+    foreach (payment_methods() as $k => $m) {
+        if (setting_bool($m['setting'], $m['default'])) $out[$k] = $m['label'];
+    }
+    if (!$out) $out['cod'] = 'Cash on Delivery';   // never leave checkout with no method
+    return $out;
+}
+// Build a PayPal.me payment URL for an amount, or '' if not configured.
+function paypal_link(float $amount): string {
+    $me = trim((string)get_setting('paypal_me', ''));
+    if ($me === '') return '';
+    $me = ltrim(preg_replace('~^https?://(www\.)?paypal\.me/~i', '', $me), '/@');
+    return 'https://www.paypal.me/' . rawurlencode($me) . '/' . number_format($amount, 2, '.', '');
+}
+
+// ── Idempotent schema migrations ──────────────────────────────
+// Adds the tax/blog columns & tables to an existing database without
+// touching data. Safe to run repeatedly. Returns a log of actions.
+function tk_run_migrations(): array {
+    $pdo = db();
+    $log = [];
+    $do = function (string $sql, string $label) use ($pdo, &$log) {
+        try { $pdo->exec($sql); $log[] = '✓ ' . $label; }
+        catch (Throwable $e) { $log[] = '✕ ' . $label . ' — ' . $e->getMessage(); }
+    };
+
+    if (!tk_column_exists('products', 'taxable')) {
+        $do("ALTER TABLE products ADD COLUMN taxable TINYINT(1) NOT NULL DEFAULT 1 AFTER active",
+            'products.taxable column');
+    } else { $log[] = '• products.taxable already present'; }
+
+    if (!tk_column_exists('users', 'tax_exempt')) {
+        $do("ALTER TABLE users ADD COLUMN tax_exempt TINYINT(1) NOT NULL DEFAULT 0 AFTER active",
+            'users.tax_exempt column');
+    } else { $log[] = '• users.tax_exempt already present'; }
+
+    // Order scheduling + tracking
+    foreach ([
+        'ship_date'       => "ALTER TABLE orders ADD COLUMN ship_date DATE DEFAULT NULL AFTER ship_country",
+        'tracking_number' => "ALTER TABLE orders ADD COLUMN tracking_number VARCHAR(100) DEFAULT NULL AFTER ship_date",
+        'carrier'         => "ALTER TABLE orders ADD COLUMN carrier VARCHAR(80) DEFAULT NULL AFTER tracking_number",
+    ] as $col => $sql) {
+        if (!tk_column_exists('orders', $col)) $do($sql, "orders.$col column");
+        else $log[] = "• orders.$col already present";
+    }
+
+    $do("CREATE TABLE IF NOT EXISTS blog_posts (
+            id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+            title        VARCHAR(200)  NOT NULL,
+            slug         VARCHAR(200)  NOT NULL UNIQUE,
+            excerpt      VARCHAR(500)  DEFAULT NULL,
+            body         MEDIUMTEXT    NOT NULL,
+            cover_image  VARCHAR(255)  DEFAULT NULL,
+            tags         VARCHAR(500)  DEFAULT NULL,
+            status       ENUM('draft','published') NOT NULL DEFAULT 'draft',
+            author_id    INT UNSIGNED  DEFAULT NULL,
+            published_at DATETIME      DEFAULT NULL,
+            created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            updated_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_status (status),
+            INDEX idx_published (published_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", 'blog_posts table');
+
+    // Vendors / suppliers
+    $do("CREATE TABLE IF NOT EXISTS vendors (
+            id           INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+            name         VARCHAR(150)  NOT NULL,
+            contact_name VARCHAR(120)  DEFAULT NULL,
+            email        VARCHAR(150)  DEFAULT NULL,
+            phone        VARCHAR(40)   DEFAULT NULL,
+            address      VARCHAR(255)  DEFAULT NULL,
+            notes        TEXT          DEFAULT NULL,
+            active       TINYINT(1)    NOT NULL DEFAULT 1,
+            created_at   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", 'vendors table');
+
+    if (!tk_column_exists('products', 'vendor_id')) {
+        $do("ALTER TABLE products ADD COLUMN vendor_id INT UNSIGNED DEFAULT NULL AFTER category_id",
+            'products.vendor_id column');
+    } else { $log[] = '• products.vendor_id already present'; }
+
+    // Inventory receiving
+    $do("CREATE TABLE IF NOT EXISTS inventory_receipts (
+            id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+            vendor_id   INT UNSIGNED  DEFAULT NULL,
+            reference   VARCHAR(80)   DEFAULT NULL,
+            note        VARCHAR(255)  DEFAULT NULL,
+            total_cost  DECIMAL(10,2) NOT NULL DEFAULT 0,
+            received_by VARCHAR(100)  DEFAULT NULL,
+            created_at  TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_vendor (vendor_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", 'inventory_receipts table');
+    $do("CREATE TABLE IF NOT EXISTS inventory_receipt_items (
+            id          INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+            receipt_id  INT UNSIGNED  NOT NULL,
+            product_id  INT UNSIGNED  DEFAULT NULL,
+            name        VARCHAR(200)  NOT NULL,
+            quantity    INT           NOT NULL DEFAULT 0,
+            unit_cost   DECIMAL(10,2) NOT NULL DEFAULT 0,
+            INDEX idx_receipt (receipt_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", 'inventory_receipt_items table');
+
+    // Preset (canned) messages
+    $do("CREATE TABLE IF NOT EXISTS preset_messages (
+            id         INT UNSIGNED  AUTO_INCREMENT PRIMARY KEY,
+            scope      VARCHAR(20)   NOT NULL DEFAULT 'pos',
+            title      VARCHAR(120)  NOT NULL,
+            body       TEXT          NOT NULL,
+            sort_order INT           NOT NULL DEFAULT 0,
+            created_at TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_scope (scope)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4", 'preset_messages table');
+
+    // Seed settings (INSERT IGNORE keeps any admin-edited values)
+    foreach ([
+        'tax_enabled' => '1',
+        'tax_rate'    => (string)(defined('TAX_RATE') ? TAX_RATE * 100 : 15),
+        'tax_label'   => 'GCT',
+        'tax_country' => 'Jamaica',
+        // Store
+        'store_phone'    => '+1-876-487-0686',
+        'store_hours'    => 'Mon–Sat 9am–6pm',
+        'store_slogan'   => 'Bedding, home essentials & fragrances — proudly Jamaican.',
+        'receipt_header' => '',
+        'receipt_footer' => 'Thank you for shopping with us!',
+        // Printer
+        'receipt_width' => '80',
+        'print_copies'  => '1',
+        'auto_print'    => '0',
+        // Payment
+        'pay_cod_enabled'       => '1',
+        'pay_transfer_enabled'  => '1',
+        'pay_card_enabled'      => '0',
+        'pay_paypal_enabled'    => '0',
+        'bank_transfer_details' => '',
+        'card_instructions'     => '',
+        'paypal_me'             => '',
+        'paypal_email'          => '',
+        // Email
+        'mail_from_name'       => defined('SITE_NAME') ? SITE_NAME : 'Tashy Kollections',
+        'mail_from_email'      => defined('SITE_EMAIL') ? SITE_EMAIL : '',
+        'mail_reply_to'        => defined('SITE_EMAIL') ? SITE_EMAIL : '',
+        'mail_admin_recipient' => defined('SITE_EMAIL') ? SITE_EMAIL : '',
+        'mail_method'          => 'mail',
+        'smtp_host'            => '',
+        'smtp_port'            => '587',
+        'smtp_user'            => '',
+        'smtp_pass'            => '',
+        'smtp_secure'          => 'tls',
+        // Marketing / announcement bar
+        'announcement_enabled' => '0',
+        'announcement_text'    => '',
+        'announcement_link'    => '',
+        'announcement_speed'   => '18',
+    ] as $k => $v) {
+        try {
+            $pdo->prepare('INSERT IGNORE INTO settings (skey, sval) VALUES (?, ?)')->execute([$k, $v]);
+        } catch (Throwable $e) {}
+    }
+    $log[] = '✓ store/printer/payment/email/marketing settings seeded';
+    return $log;
 }

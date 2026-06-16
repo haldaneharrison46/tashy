@@ -3,6 +3,7 @@
 // includes/cart.php — Cart helpers (DB-backed)
 // ============================================================
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/functions.php';   // tk_column_exists / compute_tax / customer_tax_exempt
 require_once __DIR__ . '/auth.php';
 
 // ── Key: user_id for logged-in, session_id for guests ────────
@@ -24,9 +25,11 @@ function cart_where(): array {
 // ── Get cart items with product data ─────────────────────────
 function get_cart(): array {
     [$clause, $params] = cart_where();
+    // products.taxable may not exist yet (pre-migration) — default to taxable.
+    $taxCol = tk_column_exists('products', 'taxable') ? 'p.taxable' : '1 AS taxable';
     $stmt = db()->prepare(
         'SELECT ci.id, ci.quantity, p.id AS product_id, p.name, p.brand,
-                p.price, p.compare_price, p.image, p.stock, p.slug
+                p.price, p.compare_price, p.image, p.stock, p.slug, ' . $taxCol . '
          FROM cart_items ci
          JOIN products p ON ci.product_id = p.id
          ' . $clause . ' AND p.active = 1
@@ -38,19 +41,29 @@ function get_cart(): array {
 
 // ── Cart totals ───────────────────────────────────────────────
 function cart_totals(): array {
-    $items    = get_cart();
-    $subtotal = 0;
+    $items       = get_cart();
+    $subtotal    = 0;
+    $taxableBase = 0;
     foreach ($items as $item) {
-        $subtotal += $item['price'] * $item['quantity'];
+        $line = $item['price'] * $item['quantity'];
+        $subtotal += $line;
+        if (($item['taxable'] ?? 1)) $taxableBase += $line;
     }
     // Estimate using the editable default rate/threshold (parish-specific
     // zone rate is applied at checkout once the parish is known).
     $thr  = function_exists('free_shipping_threshold') ? free_shipping_threshold() : (float)FREE_SHIPPING_THRESHOLD;
     $rate = function_exists('shipping_default_rate')   ? shipping_default_rate()   : 1500.00;
     $shipping = ($subtotal > 0 && $subtotal < $thr) ? $rate : 0.00;
-    $tax      = round($subtotal * TAX_RATE, 2);
-    $total    = $subtotal + $shipping + $tax;
-    return compact('items', 'subtotal', 'shipping', 'tax', 'total');
+    // GCT honours per-item taxable flag and the signed-in customer's exemption.
+    // Destination country defaults to the tax country here (the cart has no
+    // address yet); checkout recomputes once the country is chosen.
+    $exempt = function_exists('customer_tax_exempt')
+        ? customer_tax_exempt(is_logged_in() ? (int)$_SESSION['user_id'] : null) : false;
+    $tax    = function_exists('compute_tax')
+        ? compute_tax($taxableBase, ['tax_exempt' => $exempt])
+        : round($taxableBase * TAX_RATE, 2);
+    $total  = $subtotal + $shipping + $tax;
+    return compact('items', 'subtotal', 'taxableBase', 'shipping', 'tax', 'total');
 }
 
 // ── Cart item count ───────────────────────────────────────────

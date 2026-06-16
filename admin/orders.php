@@ -33,6 +33,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['tag_order'])) {
     redirect(asset_base() . '/admin/orders.php?id=' . $oid);
 }
 
+/* ── Record a payment ──────────────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['record_payment'])) {
+    csrf_check();
+    $oid    = (int)$_POST['order_id'];
+    $amt    = max(0, (float)($_POST['amount'] ?? 0));
+    $method = in_array($_POST['method'] ?? '', ['cash','card','transfer','paypal','cod'], true) ? $_POST['method'] : 'cash';
+    $cur = $pdo->prepare('SELECT status FROM orders WHERE id=?'); $cur->execute([$oid]); $cst = $cur->fetchColumn();
+    if ($cst !== false) {
+        $pdo->prepare('UPDATE orders SET amount_paid=?, payment_method=? WHERE id=?')->execute([$amt, $method, $oid]);
+        $pdo->prepare('INSERT INTO order_status_history (order_id, status, note, created_by) VALUES (?,?,?,?)')
+            ->execute([$oid, $cst, 'Payment recorded: J$' . number_format($amt, 2) . ' (' . $method . ')', current_user()['name']]);
+        flash('success', 'Payment recorded.');
+    }
+    redirect(asset_base() . '/admin/orders.php' . ($viewId ? '?id=' . $oid : ''));
+}
+
+/* ── Cancel transaction (restocks) ─────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
+    csrf_check();
+    $oid = (int)$_POST['order_id'];
+    $cur = $pdo->prepare('SELECT status FROM orders WHERE id=?'); $cur->execute([$oid]); $cst = $cur->fetchColumn();
+    if ($cst !== false && $cst !== 'cancelled') {
+        $its = $pdo->prepare('SELECT product_id, quantity FROM order_items WHERE order_id=? AND product_id IS NOT NULL');
+        $its->execute([$oid]);
+        foreach ($its->fetchAll() as $it) {
+            $pdo->prepare('UPDATE products SET stock = stock + ? WHERE id = ?')->execute([(int)$it['quantity'], (int)$it['product_id']]);
+        }
+        record_order_status($oid, 'cancelled', trim($_POST['cancel_note'] ?? '') ?: 'Cancelled by staff', current_user()['name']);
+        flash('success', 'Order cancelled and stock restored.');
+    } else {
+        flash('error', 'Order is already cancelled.');
+    }
+    redirect(asset_base() . '/admin/orders.php' . ($viewId ? '?id=' . $oid : ''));
+}
+
 /* ── Single order view ─────────────────────── */
 if ($viewId) {
     $stmt = $pdo->prepare("SELECT o.*, u.name as uname, u.email as uemail FROM orders o LEFT JOIN users u ON o.user_id=u.id WHERE o.id=?");
@@ -113,10 +148,29 @@ if ($viewId) {
               <option value="<?= $s ?>" <?= $order['status']===$s?'selected':'' ?>><?= ucfirst($s) ?></option>
               <?php endforeach; ?>
             </select>
-            <input type="text" name="status_note" class="form-control" placeholder="Note (optional, e.g. tracking #)" style="margin-bottom:8px">
+            <?php $orderPresets = get_preset_messages('order'); if (!empty($orderPresets)): ?>
+            <select id="orderPreset" class="form-control" style="margin-bottom:8px">
+              <option value="">Preset message…</option>
+              <?php foreach ($orderPresets as $pm): ?><option value="<?= h($pm['body']) ?>"><?= h($pm['title']) ?></option><?php endforeach; ?>
+            </select>
+            <?php endif; ?>
+            <input type="text" name="status_note" id="statusNote" class="form-control" placeholder="Note (optional, e.g. tracking #)" style="margin-bottom:8px">
             <button type="submit" class="btn btn-primary btn-sm" style="width:100%">Update &amp; notify</button>
             <a href="<?= asset_base() ?>/track.php?order=<?= urlencode($order['order_number']) ?>" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:0.78rem;color:var(--rose-gold)">View public tracking ↗</a>
           </form>
+          <?php if (!empty($orderPresets)): ?>
+          <script>
+          (function(){
+            var sel = document.getElementById('orderPreset'), note = document.getElementById('statusNote'); if (!sel) return;
+            var vars = { name: <?= json_encode($order['ship_name'] ?? '') ?>, order: <?= json_encode($order['order_number']) ?>,
+                         total: 'J$' + <?= json_encode(number_format((float)$order['total'], 2)) ?>, store: <?= json_encode(SITE_NAME) ?> };
+            sel.addEventListener('change', function(){
+              if (!sel.value) return;
+              note.value = sel.value.replace(/\{(\w+)\}/g, function(_,k){ return vars[k] != null ? vars[k] : ('{'+k+'}'); });
+            });
+          })();
+          </script>
+          <?php endif; ?>
         </div>
 
         <div class="admin-card">
@@ -206,12 +260,61 @@ $ok = flash('success');
         <?php if (($o['channel'] ?? 'online') === 'pos'): ?><span class="badge badge-info" style="margin-left:4px">POS</span><?php endif; ?>
       </td>
       <td style="color:#888;font-size:0.8rem"><?= date('d M y', strtotime($o['created_at'])) ?></td>
-      <td><a href="orders.php?id=<?= $o['id'] ?>" style="color:var(--rose-gold);font-size:0.82rem">View →</a></td>
+      <td style="white-space:nowrap">
+        <a href="orders.php?id=<?= $o['id'] ?>" style="color:var(--rose-gold);font-size:0.8rem;margin-right:6px">View</a>
+        <a href="slip.php?id=<?= (int)$o['id'] ?>&type=receipt" target="_blank" style="color:var(--rose-gold);font-size:0.8rem;margin-right:6px" title="Reprint receipt">🧾</a>
+        <button type="button" class="lnk-pay" data-id="<?= (int)$o['id'] ?>" data-num="<?= h($o['order_number']) ?>" data-total="<?= h(number_format((float)$o['total'],2,'.','')) ?>" data-method="<?= h($o['payment_method'] ?? 'cash') ?>" style="background:none;border:none;color:var(--rose-gold);font-size:0.8rem;cursor:pointer;margin-right:6px">Pay</button>
+        <?php if ($o['status'] !== 'cancelled'): ?>
+        <form method="post" style="display:inline" onsubmit="return confirm('Cancel order <?= h($o['order_number']) ?> and restore stock?')">
+          <?= csrf_field() ?><input type="hidden" name="cancel_order" value="1"><input type="hidden" name="order_id" value="<?= (int)$o['id'] ?>">
+          <button type="submit" style="background:none;border:none;color:#c0392b;font-size:0.8rem;cursor:pointer">Cancel</button>
+        </form>
+        <?php endif; ?>
+      </td>
     </tr>
     <?php endforeach; ?>
     <?php if (empty($orders)): ?><tr><td colspan="7" style="text-align:center;color:#999;padding:28px">No orders found.</td></tr><?php endif; ?>
     </tbody>
   </table>
 </div>
+
+<!-- Record payment modal -->
+<div id="payModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;border-radius:12px;max-width:380px;width:100%;padding:22px">
+    <h3 style="margin-bottom:4px">Record Payment</h3>
+    <p style="font-size:0.82rem;color:#888;margin-bottom:14px">Order <span id="payNum"></span></p>
+    <form method="post">
+      <?= csrf_field() ?>
+      <input type="hidden" name="record_payment" value="1">
+      <input type="hidden" name="order_id" id="payOrderId">
+      <div class="form-group"><label class="form-label">Amount (J$)</label>
+        <input type="number" step="0.01" min="0" name="amount" id="payAmount" class="form-control"></div>
+      <div class="form-group"><label class="form-label">Method</label>
+        <select name="method" id="payMethod" class="form-control">
+          <option value="cash">Cash</option><option value="card">Card</option>
+          <option value="transfer">Bank Transfer</option><option value="paypal">PayPal</option>
+          <option value="cod">Cash on Delivery</option>
+        </select></div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px">
+        <button type="button" class="btn btn-outline" id="payCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Payment</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+(function(){
+  const modal = document.getElementById('payModal');
+  document.querySelectorAll('.lnk-pay').forEach(b => b.addEventListener('click', () => {
+    document.getElementById('payOrderId').value = b.dataset.id;
+    document.getElementById('payNum').textContent = b.dataset.num;
+    document.getElementById('payAmount').value = b.dataset.total;
+    const m = document.getElementById('payMethod'); m.value = b.dataset.method || 'cash';
+    modal.style.display = 'flex';
+  }));
+  document.getElementById('payCancel').addEventListener('click', () => modal.style.display='none');
+  modal.addEventListener('click', e => { if (e.target === modal) modal.style.display='none'; });
+})();
+</script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>

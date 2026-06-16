@@ -86,7 +86,7 @@ require_once __DIR__ . '/includes/header.php';
           <span>Shipping</span>
           <span><?= $totals['shipping'] > 0 ? money($totals['shipping']) : '<span style="color:#3a9e6d">FREE</span>' ?></span>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span>GCT (15%)</span><span><?= money($totals['tax']) ?></span></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px"><span><?= h(tax_display_label()) ?></span><span><?= money($totals['tax']) ?></span></div>
         <?php if ($totals['shipping'] > 0): ?>
         <p style="font-size:0.78rem;color:#888;margin-bottom:14px">Add <?= money(FREE_SHIPPING_THRESHOLD - $totals['subtotal']) ?> more for free shipping!</p>
         <?php endif; ?>

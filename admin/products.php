@@ -67,6 +67,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_product'])) {
         $pid = (int)$pdo->lastInsertId();
     }
 
+    // Per-item tax flag (separate so it degrades gracefully before migration)
+    if (tk_column_exists('products', 'taxable')) {
+        $pdo->prepare('UPDATE products SET taxable=? WHERE id=?')
+            ->execute([isset($f['taxable']) ? 1 : 0, $pid]);
+    }
+    // Vendor / supplier link (guarded)
+    if (tk_column_exists('products', 'vendor_id')) {
+        $vid = (int)($f['vendor_id'] ?? 0);
+        $pdo->prepare('UPDATE products SET vendor_id=? WHERE id=?')->execute([$vid ?: null, $pid]);
+    }
+
     // Gallery: remove selected images
     if (!empty($f['del_img']) && is_array($f['del_img'])) {
         $ids = array_values(array_filter(array_map('intval', $f['del_img'])));
@@ -127,9 +138,10 @@ $products = $products->fetchAll();
 
 if ($action === 'add' || $editProduct) {
     // Show add/edit form
-    $p = $editProduct ?? ['name'=>'','brand'=>'','category_id'=>0,'description'=>'','price'=>'','compare_price'=>'','stock'=>0,'sku'=>'','tags'=>'','active'=>1,'featured'=>0,'image'=>'','image2'=>'','image3'=>''];
+    $p = $editProduct ?? ['name'=>'','brand'=>'','category_id'=>0,'vendor_id'=>0,'description'=>'','price'=>'','compare_price'=>'','stock'=>0,'sku'=>'','tags'=>'','active'=>1,'featured'=>0,'taxable'=>1,'image'=>'','image2'=>'','image3'=>''];
     $formTitle = $editProduct ? 'Edit Product' : 'Add New Product';
     $existingImgs = $editProduct ? get_product_images((int)$editProduct['id']) : [];
+    $vendors = get_vendors();
     $formErr = flash('error');
 ?>
 <div style="max-width:760px">
@@ -143,18 +155,31 @@ if ($action === 'add' || $editProduct) {
       <?= csrf_field() ?>
       <input type="hidden" name="save_product" value="1">
       <?php if ($editProduct): ?><input type="hidden" name="product_id" value="<?= $editProduct['id'] ?>"><?php endif; ?>
+      <!-- Quick fill: AI from name, or import from a product URL -->
+      <div style="background:var(--rose-pale,#faf5f1);border:1px solid var(--grey-light);border-radius:10px;padding:12px 14px;margin-bottom:16px">
+        <div style="font-size:0.82rem;font-weight:700;margin-bottom:8px">✨ Quick fill</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          <input type="text" id="qfName" class="form-control" placeholder="Type a product name, then 'AI fill'…" style="flex:1;min-width:200px">
+          <button type="button" class="btn btn-outline btn-sm" id="qfAiBtn">⚡ AI fill</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px">
+          <input type="text" id="qfUrl" class="form-control" placeholder="…or paste a product page URL to import" style="flex:1;min-width:200px">
+          <button type="button" class="btn btn-outline btn-sm" id="qfUrlBtn">🔗 Import URL</button>
+        </div>
+        <div id="qfMsg" style="font-size:0.78rem;color:#888;margin-top:6px"></div>
+      </div>
       <div class="admin-form-grid">
         <div class="form-group full">
           <label class="form-label">Product Name *</label>
-          <input type="text" name="name" class="form-control" required value="<?= h($p['name']) ?>">
+          <input type="text" name="name" id="pf_name" class="form-control" required value="<?= h($p['name']) ?>">
         </div>
         <div class="form-group">
           <label class="form-label">Brand</label>
-          <input type="text" name="brand" class="form-control" value="<?= h($p['brand']) ?>">
+          <input type="text" name="brand" id="pf_brand" class="form-control" value="<?= h($p['brand']) ?>">
         </div>
         <div class="form-group">
           <label class="form-label">Category</label>
-          <select name="category_id" class="form-control">
+          <select name="category_id" id="pf_category" class="form-control">
             <option value="">No category</option>
             <?php foreach ($categories as $cat): ?>
             <option value="<?= $cat['id'] ?>" <?= $p['category_id']==$cat['id']?'selected':'' ?>><?= h($cat['name']) ?></option>
@@ -162,8 +187,17 @@ if ($action === 'add' || $editProduct) {
           </select>
         </div>
         <div class="form-group">
+          <label class="form-label">Vendor / Supplier</label>
+          <select name="vendor_id" class="form-control">
+            <option value="">— none —</option>
+            <?php foreach ($vendors as $vd): ?>
+            <option value="<?= (int)$vd['id'] ?>" <?= (int)($p['vendor_id'] ?? 0)===(int)$vd['id']?'selected':'' ?>><?= h($vd['name']) ?></option>
+            <?php endforeach; ?>
+          </select>
+        </div>
+        <div class="form-group">
           <label class="form-label">Price (JMD) *</label>
-          <input type="number" step="0.01" name="price" class="form-control" required value="<?= h($p['price']) ?>">
+          <input type="number" step="0.01" name="price" id="pf_price" class="form-control" required value="<?= h($p['price']) ?>">
         </div>
         <div class="form-group">
           <label class="form-label">Compare At Price (JMD)</label>
@@ -179,11 +213,11 @@ if ($action === 'add' || $editProduct) {
         </div>
         <div class="form-group full">
           <label class="form-label">Description</label>
-          <textarea name="description" class="form-control" rows="5"><?= h($p['description']) ?></textarea>
+          <textarea name="description" id="pf_description" class="form-control" rows="5"><?= h($p['description']) ?></textarea>
         </div>
         <div class="form-group full">
           <label class="form-label">Tags (comma-separated)</label>
-          <input type="text" name="tags" class="form-control" value="<?= h($p['tags']) ?>">
+          <input type="text" name="tags" id="pf_tags" class="form-control" value="<?= h($p['tags']) ?>">
         </div>
         <!-- Cover image -->
         <div class="form-group full">
@@ -195,7 +229,7 @@ if ($action === 'add' || $editProduct) {
                 <input type="file" name="image_file" id="coverFile" accept="image/*" class="form-control" onchange="pfPreviewCover(this)" style="flex:1;min-width:160px">
                 <button type="button" class="btn btn-outline btn-sm" onclick="pfCamera('coverFile')">📷 Take Photo</button>
               </div>
-              <input type="text" name="image" class="form-control" placeholder="…or a filename in assets/images, or a full image URL" value="<?= h($p['image']) ?>" style="margin-top:8px">
+              <input type="text" name="image" id="pf_image" class="form-control" placeholder="…or a filename in assets/images, or a full image URL" value="<?= h($p['image']) ?>" style="margin-top:8px">
               <p style="font-size:0.75rem;color:#888;margin-top:4px">Upload a file (JPG/PNG/GIF/WebP, ≤6 MB), or type a filename/URL. Uploading wins.</p>
             </div>
           </div>
@@ -224,12 +258,15 @@ if ($action === 'add' || $editProduct) {
           <div id="galleryPreview" style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px"></div>
           <p style="font-size:0.75rem;color:#888;margin-top:4px">Select one or more images to add to this product's gallery.</p>
         </div>
-        <div class="form-group full" style="display:flex;gap:24px">
+        <div class="form-group full" style="display:flex;gap:24px;flex-wrap:wrap">
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" name="active" value="1" <?= $p['active'] ? 'checked' : '' ?>> Active (visible on store)
           </label>
           <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
             <input type="checkbox" name="featured" value="1" <?= $p['featured'] ? 'checked' : '' ?>> Featured (homepage)
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" name="taxable" value="1" <?= ($p['taxable'] ?? 1) ? 'checked' : '' ?>> Charge <?= h(tax_label()) ?> (tax) on this item
           </label>
         </div>
       </div>
@@ -279,6 +316,47 @@ function pfGalleryCapture(input){
   }
   input.value = '';
 }
+
+// ── Quick fill (AI from name / import from URL) ──
+(function(){
+  var API  = '<?= asset_base() ?>/api/product_ai.php';
+  var CSRF = <?= json_encode(csrf_token()) ?>;
+  var msg  = document.getElementById('qfMsg');
+  function setMsg(t, err){ msg.textContent = t; msg.style.color = err ? '#c0392b' : '#888'; }
+  function setVal(id, v){ var el = document.getElementById(id); if (el && v !== undefined && v !== null && v !== '') el.value = v; }
+  function applyFields(f){
+    setVal('pf_name', f.name); setVal('pf_brand', f.brand); setVal('pf_description', f.description);
+    setVal('pf_price', f.price); setVal('pf_tags', f.tags); setVal('pf_image', f.image);
+    if (f.category){
+      var sel = document.getElementById('pf_category');
+      if (sel) Array.prototype.forEach.call(sel.options, function(o){ if (o.text.trim().toLowerCase() === String(f.category).trim().toLowerCase()) sel.value = o.value; });
+    }
+    var cp = document.getElementById('coverPreview');
+    if (cp && f.image && /^https?:\/\//i.test(f.image)) { cp.src = f.image; cp.style.opacity = 1; }
+  }
+  async function call(payload, btn, busy){
+    var orig = btn.textContent; btn.disabled = true; btn.textContent = busy; setMsg('Working…');
+    try {
+      var r = await fetch(API, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({csrf:CSRF}, payload))});
+      var d = await r.json();
+      if (!d.ok) { setMsg(d.error || 'Failed.', true); return; }
+      applyFields(d.fields || {}); setMsg('Filled — review and adjust before saving.');
+    } catch(e){ setMsg(e.message, true); }
+    finally { btn.disabled = false; btn.textContent = orig; }
+  }
+  var aiBtn = document.getElementById('qfAiBtn');
+  if (aiBtn) aiBtn.addEventListener('click', function(){
+    var q = document.getElementById('qfName').value.trim() || document.getElementById('pf_name').value.trim();
+    if (!q) { setMsg('Type a product name first.', true); return; }
+    call({mode:'generate', query:q}, aiBtn, 'Thinking…');
+  });
+  var urlBtn = document.getElementById('qfUrlBtn');
+  if (urlBtn) urlBtn.addEventListener('click', function(){
+    var u = document.getElementById('qfUrl').value.trim();
+    if (!u) { setMsg('Paste a product URL first.', true); return; }
+    call({mode:'import_url', url:u}, urlBtn, 'Importing…');
+  });
+})();
 </script>
 <?php } else { // List view
 $ok  = flash('success'); ?>

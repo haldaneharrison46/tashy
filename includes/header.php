@@ -52,6 +52,26 @@ $_bodyClass = $bodyClass ?? '';
 </head>
 <body class="<?= h($_bodyClass) ?>">
 
+<?php if (function_exists('setting_bool') && setting_bool('announcement_enabled') && trim((string)get_setting('announcement_text','')) !== ''):
+  $annItems = array_filter(array_map('trim', explode('|', (string)get_setting('announcement_text',''))));
+  $annLink  = trim((string)get_setting('announcement_link',''));
+  $annSpeed = max(5, (int)get_setting('announcement_speed','18'));
+  $annText  = implode('   •   ', $annItems);
+?>
+<style>
+.tk-announce{background:var(--rose-gold,#c9956c);color:#fff;overflow:hidden;white-space:nowrap;font-size:0.85rem;position:relative}
+.tk-announce a{color:#fff;text-decoration:none}
+.tk-announce-track{display:inline-block;padding:7px 0;will-change:transform;animation:tkMarquee <?= $annSpeed ?>s linear infinite}
+.tk-announce:hover .tk-announce-track{animation-play-state:paused}
+.tk-announce-track span{padding:0 28px}
+@keyframes tkMarquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+</style>
+<div class="tk-announce" role="region" aria-label="Announcements">
+  <?php $cell = '<span>' . h($annText) . '</span>'; $inner = $cell . $cell . $cell . $cell; ?>
+  <div class="tk-announce-track"><?= $annLink !== '' ? '<a href="' . h($annLink) . '">' . $inner . '</a>' : $inner ?></div>
+</div>
+<?php endif; ?>
+
 <!-- ░░ SITE HEADER ░░ -->
 <header class="site-header" id="siteHeader">
   <div class="container">
@@ -95,6 +115,7 @@ $_bodyClass = $bodyClass ?? '';
           <!-- Wholesale B2B hidden from menu (2026-06-08) — page still reachable directly at /wholesale.php
           <li class="nav-item"><a href="<?= asset_base() ?>/wholesale.php" class="nav-link">Wholesale B2B <span class="wholesale-nav-badge">PRO</span></a></li>
           -->
+          <li class="nav-item"><a href="<?= asset_base() ?>/blog.php" class="nav-link">Journal</a></li>
           <li class="nav-item"><a href="<?= asset_base() ?>/about.php" class="nav-link">About</a></li>
           <li class="nav-item"><a href="<?= asset_base() ?>/contact.php" class="nav-link">Contact</a></li>
         </ul>
@@ -232,6 +253,7 @@ $_bodyClass = $bodyClass ?? '';
     <!-- Wholesale B2B hidden from menu (2026-06-08)
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/wholesale.php" class="mobile-nav-link">Wholesale B2B</a></li>
     -->
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/blog.php" class="mobile-nav-link">Journal</a></li>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/about.php" class="mobile-nav-link">About</a></li>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/contact.php" class="mobile-nav-link">Contact</a></li>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/policy.php" class="mobile-nav-link">Shipping &amp; Returns</a></li>

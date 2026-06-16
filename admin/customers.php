@@ -50,6 +50,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_customer'])) {
         if ($dup->fetch()) $err = 'Another account already uses that email.';
     }
 
+    $taxExempt = isset($_POST['tax_exempt']) ? 1 : 0;
+    $hasTaxCol = tk_column_exists('users', 'tax_exempt');
+
     if ($err) { flash('error', $err); }
     elseif ($id) {
         $pdo->prepare('UPDATE users SET name=?, email=?, phone=?, address=?, active=? WHERE id=?')
@@ -58,16 +61,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_customer'])) {
             $pdo->prepare('UPDATE users SET password_hash=? WHERE id=?')
                 ->execute([password_hash($pass, PASSWORD_BCRYPT, ['cost' => 12]), $id]);
         }
+        if ($hasTaxCol) $pdo->prepare('UPDATE users SET tax_exempt=? WHERE id=?')->execute([$taxExempt, $id]);
         flash('success', 'Customer updated.');
         redirect(asset_base() . '/admin/customers.php?id=' . $id);
     } else {
         $hash = password_hash($pass !== '' ? $pass : bin2hex(random_bytes(8)), PASSWORD_BCRYPT, ['cost' => 12]);
         $pdo->prepare('INSERT INTO users (name, email, phone, address, password_hash, role, active) VALUES (?,?,?,?,?,?,?)')
             ->execute([$name, $email, $phone, $address ?: null, $hash, 'customer', $active]);
+        $newId = (int)$pdo->lastInsertId();
+        if ($hasTaxCol) $pdo->prepare('UPDATE users SET tax_exempt=? WHERE id=?')->execute([$taxExempt, $newId]);
         flash('success', 'Customer added.');
-        redirect(asset_base() . '/admin/customers.php?id=' . (int)$pdo->lastInsertId());
+        redirect(asset_base() . '/admin/customers.php?id=' . $newId);
     }
     redirect(asset_base() . '/admin/customers.php' . ($id ? '?action=edit&id=' . $id : '?action=add'));
+}
+
+/* ── Delete customer ───────────────────────── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_customer'])) {
+    csrf_check();
+    $uid = (int)$_POST['customer_id'];
+    $pdo->prepare("DELETE FROM users WHERE id=? AND role='customer'")->execute([$uid]);
+    flash('success', 'Customer deleted.');
+    redirect(asset_base() . '/admin/customers.php');
 }
 
 /* ── Toggle active ─────────────────────────── */
@@ -87,7 +102,7 @@ if ($action === 'edit' && $viewId) {
     $editC = $st->fetch();
 }
 if ($action === 'add' || $editC) {
-    $c = $editC ?? ['id'=>0,'name'=>'','email'=>'','phone'=>'','address'=>'','active'=>1];
+    $c = $editC ?? ['id'=>0,'name'=>'','email'=>'','phone'=>'','address'=>'','active'=>1,'tax_exempt'=>0];
     $err = flash('error');
     ?>
     <div style="margin-bottom:18px"><a href="customers.php" style="color:var(--rose-gold)">&larr; Back to Customers</a></div>
@@ -112,6 +127,11 @@ if ($action === 'add' || $editC) {
           <div class="form-group full">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
               <input type="checkbox" name="active" value="1" <?= $c['active'] ? 'checked' : '' ?>> Active (can sign in &amp; order)
+            </label>
+          </div>
+          <div class="form-group full">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" name="tax_exempt" value="1" <?= !empty($c['tax_exempt']) ? 'checked' : '' ?>> Tax exempt (never charge <?= h(tax_label()) ?>)
             </label>
           </div>
         </div>
@@ -172,7 +192,7 @@ if ($viewId) {
       </div>
       <div>
         <div class="admin-card">
-          <h2><?= h($c['name']) ?> <?php if (!$c['active']): ?><span class="badge badge-grey">Inactive</span><?php endif; ?></h2>
+          <h2><?= h($c['name']) ?> <?php if (!$c['active']): ?><span class="badge badge-grey">Inactive</span><?php endif; ?><?php if (!empty($c['tax_exempt'])): ?><span class="badge badge-info">Tax exempt</span><?php endif; ?></h2>
           <p style="font-size:0.85rem;color:#888;margin-top:6px">✉ <?= h($c['email']) ?></p>
           <p style="font-size:0.85rem;color:#888">📞 <?= h($c['phone'] ?: '—') ?></p>
           <?php if (!empty($c['address'])): ?><p style="font-size:0.85rem;color:#888">📍 <?= h($c['address']) ?></p><?php endif; ?>
@@ -185,6 +205,10 @@ if ($viewId) {
               <input type="hidden" name="customer_id" value="<?= (int)$c['id'] ?>">
               <input type="hidden" name="back_to_view" value="1">
               <button type="submit" class="btn btn-outline btn-sm"><?= $c['active'] ? 'Deactivate' : 'Activate' ?></button>
+            </form>
+            <form method="post" style="display:inline" onsubmit="return confirm('Delete this customer? This cannot be undone.')">
+              <?= csrf_field() ?><input type="hidden" name="delete_customer" value="1"><input type="hidden" name="customer_id" value="<?= (int)$c['id'] ?>">
+              <button type="submit" class="btn btn-sm" style="background:#fef2f2;color:#c0392b;border:1px solid #fca5a5">Delete</button>
             </form>
           </div>
         </div>
@@ -235,7 +259,14 @@ $ok = flash('success'); $err = flash('error');
       <td style="font-weight:600"><?= money($c['total_spent']) ?></td>
       <td style="color:#888;font-size:0.8rem"><?= $c['last_order'] ? date('d M y', strtotime($c['last_order'])) : '—' ?></td>
       <td><span class="badge <?= $c['active'] ? 'badge-success' : 'badge-grey' ?>"><?= $c['active'] ? 'Active' : 'Inactive' ?></span></td>
-      <td><a href="customers.php?id=<?= (int)$c['id'] ?>" style="color:var(--rose-gold);font-size:0.82rem">View →</a></td>
+      <td>
+        <a href="customers.php?id=<?= (int)$c['id'] ?>" style="color:var(--rose-gold);font-size:0.82rem;margin-right:8px">View</a>
+        <a href="customers.php?action=edit&id=<?= (int)$c['id'] ?>" style="color:var(--rose-gold);font-size:0.82rem;margin-right:8px">Edit</a>
+        <form method="post" style="display:inline" onsubmit="return confirm('Delete this customer? This cannot be undone.')">
+          <?= csrf_field() ?><input type="hidden" name="delete_customer" value="1"><input type="hidden" name="customer_id" value="<?= (int)$c['id'] ?>">
+          <button type="submit" style="background:none;border:none;color:#c0392b;font-size:0.82rem;cursor:pointer">Delete</button>
+        </form>
+      </td>
     </tr>
     <?php endforeach; ?>
     <?php if (empty($customers)): ?><tr><td colspan="8" style="text-align:center;color:#999;padding:28px">No customers found.</td></tr><?php endif; ?>
