@@ -34,7 +34,13 @@ jobs:
             if [ -z "$ID" ]; then echo "(zone not added to this Cloudflare account yet — add it in the dashboard first)"; continue; fi
             echo "-- current DNS records --"
             curl -s -H "$AUTH" "$BASE/zones/$ID/dns_records?per_page=100" | jq -r '.result[] | "   \(.type)\t\(.name)\t-> \(.content)\tproxied=\(.proxied)"'
-            echo "-- current SSL mode: $(curl -s -H "$AUTH" "$BASE/zones/$ID/settings/ssl" | jq -r '.result.value')"
+            echo "-- current SSL mode: $(curl -s -H "$AUTH" "$BASE/zones/$ID/settings/ssl" | jq -r '.result.value // "??"')"
+            echo "-- page rules --"
+            curl -s -H "$AUTH" "$BASE/zones/$ID/pagerules" | jq -c '.result[]? | {targets: [.targets[].constraint.value], actions: [.actions[] | {id, value}]}'
+            echo "-- dynamic redirect rules --"
+            curl -s -H "$AUTH" "$BASE/zones/$ID/rulesets/phases/http_request_dynamic_redirect/entrypoint" | jq -c '.result.rules[]? | {expression, action_parameters: .action_parameters}'
+            echo "-- bulk redirect (account) lists exist? --"
+            curl -s -H "$AUTH" "$BASE/zones/$ID/rulesets" | jq -r '.result[]? | "   ruleset: \(.phase) \(.name)"'
             if [ "$APPLY" = "true" ]; then
               echo "-- APPLY: SSL=flexible --"
               curl -s -X PATCH -H "$AUTH" -H "$CT" --data '{"value":"flexible"}' "$BASE/zones/$ID/settings/ssl" | jq -c '{success, value: .result.value}'
