@@ -157,9 +157,29 @@ function currency_base(): string {
     $c = defined('CURRENCY') ? strtolower(CURRENCY) : 'jmd';
     return array_key_exists($c, currency_config()) ? $c : 'jmd';
 }
+// Which display currencies the store offers in the header switcher. Per-store
+// setting `currencies_enabled` (comma list, e.g. "jmd,usd"); defaults to ALL
+// configured currencies so existing stores are unchanged. The base currency is
+// always included even if omitted.
+function currencies_enabled(): array {
+    $cfg = currency_config();
+    $raw = trim((string) get_setting('currencies_enabled', ''));
+    if ($raw === '') {
+        $list = array_keys($cfg);
+    } else {
+        $list = array_values(array_filter(
+            array_map(fn($c) => strtolower(trim($c)), explode(',', $raw)),
+            fn($c) => array_key_exists($c, $cfg)
+        ));
+    }
+    $base = currency_base();
+    if (!in_array($base, $list, true)) array_unshift($list, $base);
+    return $list ?: [$base];
+}
 function current_currency(): string {
+    $enabled = currencies_enabled();
     $c = strtolower($_COOKIE['cur'] ?? currency_base());
-    return array_key_exists($c, currency_config()) ? $c : currency_base();
+    return in_array($c, $enabled, true) ? $c : currency_base();
 }
 function money(float $amount): string {
     $cfg  = currency_config();

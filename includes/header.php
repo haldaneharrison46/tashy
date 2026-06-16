@@ -128,19 +128,20 @@ $_bodyClass = $bodyClass ?? '';
               <button class="hdr-icon-opt" data-pref-lang="zh">🇨🇳 中文</button>
             </div>
           </div>
+          <?php if (count(currencies_enabled()) > 1): ?>
           <div class="hdr-icon-wrap" id="hdrCurWrap">
             <button class="hdr-icon-btn" id="hdrCurBtn" aria-label="Currency">
               <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
               <span id="hdrCurLbl"><?= currency_config()[current_currency()]['label'] ?></span>
             </button>
             <div class="hdr-icon-menu" id="hdrCurMenu">
-              <?php $_curNow = current_currency(); ?>
-              <button class="hdr-icon-opt <?= $_curNow==='usd'?'active':'' ?>" data-pref-cur="usd">🇺🇸 USD — $</button>
-              <button class="hdr-icon-opt <?= $_curNow==='jmd'?'active':'' ?>" data-pref-cur="jmd">🇯🇲 JMD — J$</button>
-              <button class="hdr-icon-opt <?= $_curNow==='gbp'?'active':'' ?>" data-pref-cur="gbp">🇬🇧 GBP — £</button>
-              <button class="hdr-icon-opt <?= $_curNow==='eur'?'active':'' ?>" data-pref-cur="eur">🇪🇺 EUR — €</button>
+              <?php $_curNow = current_currency(); $_curCfg = currency_config(); ?>
+              <?php foreach (currencies_enabled() as $_c): ?>
+              <button class="hdr-icon-opt <?= $_curNow===$_c?'active':'' ?>" data-pref-cur="<?= h($_c) ?>"><?= h($_curCfg[$_c]['label']) ?> — <?= h($_curCfg[$_c]['symbol']) ?></button>
+              <?php endforeach; ?>
             </div>
           </div>
+          <?php endif; ?>
         </div>
 
         <!-- Search -->
