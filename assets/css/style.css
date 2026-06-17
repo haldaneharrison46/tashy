@@ -2256,9 +2256,9 @@ select.form-control { cursor: pointer; }
   inset: 0;
   z-index: -1;
   background: linear-gradient(100deg,
-    rgba(22,18,15,0.82) 0%,
-    rgba(22,18,15,0.55) 42%,
-    rgba(22,18,15,0.12) 100%);
+    rgba(22,18,15,0.86) 0%,
+    rgba(22,18,15,0.62) 46%,
+    rgba(22,18,15,0.15) 100%);
 }
 .hero-home-text { max-width: 640px; }
 .hero-home .hero-eyebrow {
