@@ -12,12 +12,11 @@
 -- from a dev machine, so this is a phpMyAdmin / server-side step.)
 -- ============================================================
 
--- Perfumes were showing a candle photo — point them at a fragrance
--- bottle image instead. NOTE: this is the closest in-library image;
--- for the best result upload a real bottle photo per product in
--- admin → Products (it overrides this).
-UPDATE products SET image = 'pexels-karola-g-4735904.jpg' WHERE sku = 'FRG-EDP-NOIR';
-UPDATE products SET image = 'pexels-karola-g-4735904.jpg' WHERE sku = 'FRG-EDP-FLEUR';
+-- Perfumes were showing a candle photo — point them at real perfume
+-- bottle photos (added to assets/images): a dark masculine bottle for
+-- the "for Him" scent and an elegant feminine bottle for "for Her".
+UPDATE products SET image = 'perfume-noir.jpg'  WHERE sku = 'FRG-EDP-NOIR';
+UPDATE products SET image = 'perfume-fleur.jpg' WHERE sku = 'FRG-EDP-FLEUR';
 
 -- Rugs/mats: the boho *runner* read better as the patterned room rug,
 -- and the *doormat* as the floor mat — swap them.
