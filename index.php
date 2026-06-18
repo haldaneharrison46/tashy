@@ -12,7 +12,7 @@ require_once __DIR__ . '/includes/header.php';
 <!-- ░░ HERO ░░ -->
 <?php
   $heroImg = trim((string) get_setting('hero_image', ''));
-  $heroBg  = $heroImg !== '' ? (preg_match('~^https?://~i', $heroImg) ? $heroImg : product_img($heroImg)) : asset_base() . '/assets/images/hero-home.jpg';
+  $heroBg  = $heroImg !== '' ? (preg_match('~^https?://~i', $heroImg) ? $heroImg : product_img($heroImg)) : asset_base() . '/assets/images/' . hero_default_image();
   $weekly  = trim((string) get_setting('weekly_special', ''));
 ?>
 <section class="hero-home" style="background-image:url('<?= h($heroBg) ?>')">

@@ -21,7 +21,7 @@ $_bodyClass = $bodyClass ?? '';
   <title><?= h($_pageTitle) ?></title>
   <?php
     $_desc  = $metaDesc ?? 'Home décor, bedding, mats & fragrances — Tashy Kollections, Falmouth, Jamaica.';
-    $_ogImg = $ogImage ?? (SITE_URL . '/assets/images/hero-home.jpg');
+    $_ogImg = $ogImage ?? (SITE_URL . '/assets/images/' . hero_default_image());
     $_ogType= $ogType ?? 'website';
     $_canon = site_origin() . ($_SERVER['REQUEST_URI'] ?? '/');
   ?>

@@ -73,6 +73,13 @@ function sk(string $home, string $beauty, ?string $luxe = null): string {
     }
 }
 
+// Default hero / social-share image filename for this store kind. Stores can
+// still override per-site via the hero_image setting; this is the fallback
+// when that's empty. Files live in assets/images/.
+function hero_default_image(): string {
+    return sk('hero-home.jpg', 'hero-beauty.jpg', 'hero-luxe.jpg');
+}
+
 // Returns the brand logo as inline SVG, scaled to $width. The wordmark uses
 // currentColor so it adapts to its context (dark admin sidebar, light header);
 // the emblem + subtitle stay rose-gold. Font sizes auto-fit longer names.
