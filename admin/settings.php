@@ -96,6 +96,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_homepage'])) {
     redirect(asset_base() . '/admin/settings.php#homepage');
 }
 
+/* ── FAQ (admin-editable; stored as JSON in the faq_items setting) ── */
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_faq'])) {
+    csrf_check();
+    $qs = $_POST['faq_q'] ?? [];
+    $as = $_POST['faq_a'] ?? [];
+    $items = [];
+    foreach ($qs as $i => $q) {
+        $q = trim((string)$q);
+        $a = trim((string)($as[$i] ?? ''));
+        if ($q !== '' && $a !== '') $items[] = ['q' => $q, 'a' => $a];
+    }
+    set_setting('faq_items', $items ? json_encode($items, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '');
+    flash('success', $items ? 'FAQ saved.' : 'FAQ cleared — the default questions will be shown.');
+    redirect(asset_base() . '/admin/settings.php#faq');
+}
+
 /* ── Preset messages add/delete ── */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['preset_add'])) {
     csrf_check();
@@ -151,6 +167,7 @@ $scopeLabels = ['pos' => 'POS receipt share', 'order' => 'Order status update', 
   <a href="#tax">Tax</a>
   <a href="#marketing">Announcement</a>
   <a href="#homepage">Homepage</a>
+  <a href="#faq">FAQ</a>
   <a href="#presets">Preset Messages</a>
   <a href="#data">Database</a>
 </div>
@@ -342,6 +359,47 @@ $scopeLabels = ['pos' => 'POS receipt share', 'order' => 'Order status update', 
       <input type="checkbox" name="call_to_order" value="1" <?= setting_bool('call_to_order') ? 'checked' : '' ?>> Show a "Call to Order" button on the hero (uses the store phone)</label></div>
     <button type="submit" class="btn btn-primary" style="margin-top:8px">Save Homepage</button>
   </form>
+</div>
+
+<!-- ═══ FAQ ═══ -->
+<div class="admin-card" id="faq" style="max-width:680px">
+  <h2>FAQ</h2>
+  <p style="color:#888;font-size:0.84rem;margin-bottom:14px">Questions &amp; answers shown on your <a href="<?= asset_base() ?>/faq.php" target="_blank" style="color:var(--rose-gold)">FAQ page</a>. Leave a question blank to remove it. Save with no questions to restore the built-in defaults.</p>
+  <form method="post">
+    <?= csrf_field() ?><input type="hidden" name="save_faq" value="1">
+    <div id="faqRows">
+      <?php foreach (get_faq_items() as $f): ?>
+      <div class="faq-row" style="border:1px solid var(--grey-light);border-radius:10px;padding:12px;margin-bottom:10px">
+        <div class="form-group" style="margin-bottom:8px">
+          <input type="text" name="faq_q[]" class="form-control" value="<?= h($f['q']) ?>" placeholder="Question">
+        </div>
+        <div class="form-group" style="margin-bottom:8px">
+          <textarea name="faq_a[]" class="form-control" rows="2" placeholder="Answer"><?= h($f['a']) ?></textarea>
+        </div>
+        <button type="button" class="btn btn-sm" style="background:#fef2f2;color:#c0392b;border:1px solid #fca5a5" onclick="this.closest('.faq-row').remove()">Remove</button>
+      </div>
+      <?php endforeach; ?>
+    </div>
+    <button type="button" class="btn btn-outline btn-sm" style="margin:4px 0 12px" onclick="faqAddRow()">+ Add question</button>
+    <div><button type="submit" class="btn btn-primary">Save FAQ</button></div>
+  </form>
+  <template id="faqRowTpl">
+    <div class="faq-row" style="border:1px solid var(--grey-light);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div class="form-group" style="margin-bottom:8px">
+        <input type="text" name="faq_q[]" class="form-control" placeholder="Question">
+      </div>
+      <div class="form-group" style="margin-bottom:8px">
+        <textarea name="faq_a[]" class="form-control" rows="2" placeholder="Answer"></textarea>
+      </div>
+      <button type="button" class="btn btn-sm" style="background:#fef2f2;color:#c0392b;border:1px solid #fca5a5" onclick="this.closest('.faq-row').remove()">Remove</button>
+    </div>
+  </template>
+  <script>
+  function faqAddRow(){
+    var tpl = document.getElementById('faqRowTpl');
+    document.getElementById('faqRows').appendChild(tpl.content.cloneNode(true));
+  }
+  </script>
 </div>
 
 <!-- ═══ PRESET MESSAGES ═══ -->

@@ -41,6 +41,7 @@
           <li><a href="<?= asset_base() ?>/track.php">Track Your Order</a></li>
           <li><a href="<?= asset_base() ?>/contact.php">Contact Us</a></li>
           <li><a href="<?= asset_base() ?>/policy.php">Shipping &amp; Returns</a></li>
+          <li><a href="<?= asset_base() ?>/faq.php">FAQ</a></li>
           <li><a href="<?= asset_base() ?>/wholesale.php">Wholesale B2B</a></li>
           <li><a href="<?= asset_base() ?>/blog.php">Journal</a></li>
           <li><a href="<?= asset_base() ?>/about.php">About Us</a></li>

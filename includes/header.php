@@ -248,6 +248,7 @@ $_bodyClass = $bodyClass ?? '';
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/about.php" class="mobile-nav-link">About</a></li>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/contact.php" class="mobile-nav-link">Contact</a></li>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/policy.php" class="mobile-nav-link">Shipping &amp; Returns</a></li>
+    <li class="mobile-nav-item"><a href="<?= asset_base() ?>/faq.php" class="mobile-nav-link">FAQ</a></li>
     <?php if ($_user): ?>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/account.php" class="mobile-nav-link">My Account</a></li>
     <li class="mobile-nav-item"><a href="<?= asset_base() ?>/logout.php" class="mobile-nav-link" style="color:#c0392b">Sign Out</a></li>

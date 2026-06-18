@@ -327,6 +327,55 @@ function set_setting(string $key, string $val): void {
                    ON DUPLICATE KEY UPDATE sval = VALUES(sval)')->execute([$key, $val]);
 }
 
+// ── FAQ (admin-editable) ──────────────────────────────────────
+// FAQs are stored as a JSON array of {q, a} in the `faq_items`
+// setting (no schema change needed). Owner edits them in admin →
+// Settings → FAQ. When unset/empty, a sensible store_kind-aware
+// default set is shown so faq.php is never blank.
+function get_faq_items(): array {
+    $raw = trim((string) get_setting('faq_items', ''));
+    if ($raw !== '') {
+        $decoded = json_decode($raw, true);
+        if (is_array($decoded)) {
+            $items = [];
+            foreach ($decoded as $it) {
+                $q = trim((string)($it['q'] ?? ''));
+                $a = trim((string)($it['a'] ?? ''));
+                if ($q !== '' && $a !== '') $items[] = ['q' => $q, 'a' => $a];
+            }
+            if ($items) return $items;
+        }
+    }
+    return faq_default_items();
+}
+function faq_default_items(): array {
+    $free   = money(free_shipping_threshold());
+    $addr   = store_address();
+    $pickup = $addr !== '' ? $addr : 'our store';
+    return [
+        ['q' => 'Where do you deliver?',
+         'a' => 'We deliver island-wide across all 14 parishes of Jamaica, and offer local pickup. International shipping may be available on request — just contact us.'],
+        ['q' => 'How long does delivery take?',
+         'a' => 'Most island-wide orders arrive within 2–4 business days after payment is confirmed. Kingston and major towns are usually quicker.'],
+        ['q' => 'Is shipping really free?',
+         'a' => "Yes — orders over $free ship free island-wide. Smaller orders are charged a flat delivery rate, shown at checkout before you pay."],
+        ['q' => 'Can I pick up my order instead?',
+         'a' => "Absolutely. Choose local pickup at checkout and we'll let you know when your order is ready at $pickup."],
+        ['q' => 'What payment methods do you accept?',
+         'a' => 'You can pay by bank transfer, card, or cash on pickup. The options enabled for your order are shown at checkout.'],
+        ['q' => 'Can I pay in US$ or JMD?',
+         'a' => 'Yes — use the currency switcher in the header to shop in either US$ or JMD. Prices convert automatically for display.'],
+        ['q' => 'What is your return policy?',
+         'a' => sk('If something isn\'t right, contact us within 7 days of delivery. Unused items in original packaging can be returned or exchanged — see our Shipping & Returns page for details.',
+                   'For hygiene reasons, opened beauty products can\'t be returned, but unopened items in original packaging can be returned within 7 days. See our Shipping & Returns page.',
+                   'Contact us within 7 days of delivery. Unworn items with tags in original packaging can be returned or exchanged — see our Shipping & Returns page.')],
+        ['q' => 'How do I track my order?',
+         'a' => 'Use the "Track Your Order" link in the footer and enter your order number, or sign in to your account to see live order status.'],
+        ['q' => "I have another question — how do I reach you?",
+         'a' => 'We\'re happy to help. Use the Contact page or message us directly, and we\'ll get back to you as soon as we can.'],
+    ];
+}
+
 // ── Schema introspection (safe before migrations run) ─────────
 // Returns true if a column exists. Lets new tax/blog code degrade
 // gracefully on an un-migrated database instead of throwing.
