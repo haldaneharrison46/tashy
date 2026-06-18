@@ -229,17 +229,8 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function reloadCartDrawer() {
-    var drawer = document.getElementById('cartDrawer');
-    if (!drawer) return;
-    fetch(tkUrl('/api/cart.php'))
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data.ok) return;
-        updateCartCount(data.count);
-        // Refresh the page to get updated drawer from PHP
-        // (lightweight approach for server-rendered cart)
-        // For full SPA drawer, we'd re-render here; for now open drawer and let user see
-      });
+    // Re-render the drawer live (defined at top-level scope).
+    if (typeof tkRefreshCartDrawer === 'function') tkRefreshCartDrawer(true);
   }
 
   /* ── Wishlist toggle ──────────────────────────── */
@@ -386,6 +377,32 @@ function tkSetCartCount(n) {
   });
 }
 
+/* Re-render the cart drawer live (items + footer + counts) from the
+ * server, so a newly added item shows without a page refresh. Pass
+ * open=true to slide the drawer open afterwards. */
+function tkRefreshCartDrawer(open) {
+  var itemsEl = document.getElementById('cartItems');
+  var drawer  = document.getElementById('cartDrawer');
+  if (!itemsEl || !drawer) return;
+  fetch(tkUrl('/api/cart_drawer.php'), { headers: { 'X-Requested-With': 'fetch' } })
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.ok) return;
+      itemsEl.innerHTML = d.itemsHtml || '';
+      var oldFooter = drawer.querySelector('.cart-footer');
+      if (oldFooter) oldFooter.parentNode.removeChild(oldFooter);
+      if (d.footerHtml) itemsEl.insertAdjacentHTML('afterend', d.footerHtml);
+      tkSetCartCount(d.count);
+      var dc = document.getElementById('drawerCount');
+      if (dc) dc.textContent = '(' + (d.count || 0) + ')';
+      if (open) {
+        var ov = document.getElementById('cartOverlay');
+        if (ov) { ov.classList.add('open'); document.body.style.overflow = 'hidden'; }
+      }
+    })
+    .catch(function () {});
+}
+
 function addToCart(productId, btn, qty) {
   qty = parseInt(qty) || 1;
   var orig = btn ? btn.textContent : '';
@@ -397,7 +414,7 @@ function addToCart(productId, btn, qty) {
   })
     .then(function (r) { return r.json(); })
     .then(function (d) {
-      if (d.ok) { tkToast(d.message || 'Added to cart!'); tkSetCartCount(d.count); }
+      if (d.ok) { tkToast(d.message || 'Added to cart!'); tkSetCartCount(d.count); tkRefreshCartDrawer(true); }
       else { tkToast(d.error || 'Could not add to cart.', true); }
     })
     .catch(function () { tkToast('Connection error.', true); })
